@@ -1,0 +1,38 @@
+name: Reminders
+
+# Daily check for dated follow-ups. When one comes due, re-runs CI and mentions the
+# owner on the issue (once), so the reminder arrives as a GitHub notification.
+on:
+  schedule:
+    - cron: "0 0 * * *" # 09:00 JST
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  actions: write
+  contents: read
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Ubuntu 26 migration check (issue #5)
+        run: |
+          issue=5
+          due=2026-10-19
+          marker="reminder:ubuntu26"
+          if [[ "$(date -u +%F)" < "$due" ]]; then
+            echo "Not due yet ($due)"; exit 0
+          fi
+          if [[ "$(gh issue view $issue --json state -q .state)" != "OPEN" ]]; then
+            echo "Issue #$issue is closed"; exit 0
+          fi
+          if gh issue view $issue --json comments -q '.comments[].body' | grep -q "$marker"; then
+            echo "Already reminded"; exit 0
+          fi
+          gh workflow run ci.yml --ref main
+          gh issue comment $issue --body "@${{ github.repository_owner }} ubuntu-latest が Ubuntu 26 へ移行する日（$due）になりました。確認のため CI を再実行しています: ${{ github.server_url }}/${{ github.repository }}/actions/workflows/ci.yml
+          <!-- $marker -->"
