@@ -21,7 +21,7 @@ var is_weapon := true
 var level := 0
 # Highlights the pip that the next pick would fill.
 var preview := false
-var icon_size := 44.0
+@export var icon_size := 44.0
 
 
 func configure(id: String, weapon: bool, lv: int, show_preview: bool = false) -> void:

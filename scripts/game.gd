@@ -5,12 +5,23 @@ const GemScript := preload("res://scripts/gem.gd")
 const BackgroundScript := preload("res://scripts/background.gd")
 const FxScript := preload("res://scripts/fx.gd")
 const TitleDecoScript := preload("res://scripts/title_deco.gd")
-const ItemIconScript := preload("res://scripts/item_icon.gd")
 const Palette := preload("res://scripts/palette.gd")
 const Balance := preload("res://scripts/balance.gd")
 const ScoreStore := preload("res://scripts/score_store.gd")
 const Spawner := preload("res://scripts/spawner.gd")
 const CameraRig := preload("res://scripts/camera_rig.gd")
+const UiText := preload("res://scripts/ui/ui_text.gd")
+const UI_THEME := preload("res://scenes/ui/ui_theme.tres")
+const Hud := preload("res://scripts/ui/hud.gd")
+const LevelUp := preload("res://scripts/ui/level_up.gd")
+const GameOver := preload("res://scripts/ui/game_over.gd")
+const PauseMenu := preload("res://scripts/ui/pause_menu.gd")
+const TitleMenu := preload("res://scripts/ui/title_menu.gd")
+const HudScene := preload("res://scenes/ui/hud.tscn")
+const LevelUpScene := preload("res://scenes/ui/level_up.tscn")
+const GameOverScene := preload("res://scenes/ui/game_over.tscn")
+const PauseScene := preload("res://scenes/ui/pause_menu.tscn")
+const TitleScene := preload("res://scenes/ui/title_menu.tscn")
 const WEAPON_SCRIPTS := {
 	"blaster": preload("res://scripts/weapons/blaster.gd"),
 	"homing": preload("res://scripts/weapons/homing.gd"),
@@ -21,7 +32,6 @@ const WEAPON_SCRIPTS := {
 }
 
 const UI_ACCENT := Color(0.35, 0.95, 1.0)
-const UI_PANEL := Color(0.04, 0.06, 0.11, 0.94)
 const GAME_OVER_DELAY := 0.7
 const SEPARATION_CELL := 40.0
 const SEPARATION_SPACING := 0.95
@@ -55,39 +65,14 @@ var enemy_grid := {}
 var score := 0
 var kill_score := 0
 var overflow_score := 0
-var ranking_root: Control
-var ranking_rows: Control
 var cleared := false
-var hud_weapon_icons: Array = []
-var hud_passive_icons: Array = []
-var score_label: Label
-var ui_font: Font
 
-var hp_label: Label
-var level_label: Label
-var time_label: Label
-var hp_fill: Panel
-var xp_fill: Panel
-
-var upgrade_layer: CanvasLayer
-var choice_buttons: Array[Button] = []
-
-var game_over_layer: CanvasLayer
-var go_title: Label
-var go_stats: Label
-var go_score: Label
-var go_best: Label
-var btn_restart: Button
-var btn_go_title: Button
-
-var hud_layer: CanvasLayer
-var title_layer: CanvasLayer
+var hud_layer: Hud
+var upgrade_layer: LevelUp
+var game_over_layer: GameOver
+var pause_layer: PauseMenu
+var title_layer: TitleMenu
 var title_deco: Node2D
-var btn_start: Button
-var btn_quit: Button
-var pause_layer: CanvasLayer
-var btn_resume: Button
-var btn_pause_title: Button
 
 
 func _ready() -> void:
@@ -95,14 +80,9 @@ func _ready() -> void:
 	process_physics_priority = 10
 	add_to_group("game")
 	scores.load_saved()
-	ui_font = _make_font()
 	_build_environment()
 	_build_world()
-	_build_hud()
-	_build_upgrade_ui()
-	_build_game_over_ui()
-	_build_pause_ui()
-	_build_title_ui()
+	_build_ui()
 	world.process_mode = Node.PROCESS_MODE_DISABLED
 	player.visible = false
 	if skip_title:
@@ -148,7 +128,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	match phase:
 		Phase.TITLE:
-			if ranking_root.visible:
+			if title_layer.is_ranking_open():
 				if key.keycode in [KEY_ESCAPE, KEY_ENTER, KEY_KP_ENTER, KEY_SPACE, KEY_BACKSPACE]:
 					_show_ranking(false)
 			elif key.keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE]:
@@ -359,24 +339,14 @@ func _finish(survived: bool) -> void:
 		fx.ring(player.global_position, Palette.hdr(Palette.PLAYER, 1.8), 600.0, 0.8)
 		camera.add_trauma(0.5)
 	var rank := scores.record(score, cleared, elapsed)
-	go_title.text = "タイムアップ！" if survived else "ゲームオーバー"
-	go_title.add_theme_color_override("font_color", Palette.GEM if survived else Palette.HURT)
 	var lines: Array[String] = ["撃破 %d体  %d" % [kills, kill_score]]
 	if overflow_score > 0:
 		lines.append("強化ボーナス  %d" % overflow_score)
 	if survived:
 		lines.append("クリア  %d    残りHP  %d" % [clear_bonus, hp_bonus])
 	else:
-		lines.append("生存 %s / %s" % [_format_time(elapsed), _format_time(Balance.TIME_LIMIT)])
-	go_stats.text = "\n".join(lines)
-	go_score.text = "%d" % score
-	if rank == 0:
-		go_best.text = "NEW RECORD!"
-	elif rank > 0:
-		go_best.text = "ランクイン  %d位      BEST  %d" % [rank + 1, scores.best]
-	else:
-		go_best.text = "BEST  %d" % scores.best
-	go_best.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35) if rank >= 0 else Color(0.75, 0.88, 0.95))
+		lines.append("生存 %s / %s" % [UiText.format_time(elapsed), UiText.format_time(Balance.TIME_LIMIT)])
+	game_over_layer.show_result(survived, score, rank, scores.best, lines)
 	await get_tree().create_timer(GAME_OVER_DELAY).timeout
 	game_over_layer.visible = true
 
@@ -391,8 +361,7 @@ func _open_level_up() -> void:
 		return
 	phase = Phase.LEVEL_UP
 	world.process_mode = Node.PROCESS_MODE_DISABLED
-	_refresh_upgrade_buttons()
-	upgrade_layer.visible = true
+	upgrade_layer.show_choices(level_choices, item_level)
 
 
 # Everything is maxed: no menu, just heal when hurt or bank points.
@@ -512,7 +481,7 @@ func _build_world() -> void:
 	background.camera = camera
 	title_deco = TitleDecoScript.new()
 	title_deco.camera = camera
-	title_deco.sub_font = ui_font
+	title_deco.sub_font = UI_THEME.default_font
 	add_child(title_deco)
 
 
@@ -559,424 +528,33 @@ func _build_environment() -> void:
 	vignette_layer.add_child(vignette)
 
 
-func _build_hud() -> void:
-	var layer := CanvasLayer.new()
-	layer.name = "HUD"
-	layer.layer = 10
-	layer.visible = false
-	add_child(layer)
-	hud_layer = layer
-	var root := Control.new()
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	layer.add_child(root)
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var view := get_viewport_rect().size
-	var shade := ColorRect.new()
-	shade.color = Color(0.02, 0.03, 0.06, 0.72)
-	shade.position = Vector2.ZERO
-	shade.size = Vector2(view.x, 84)
-	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(shade)
-	var rule := ColorRect.new()
-	rule.color = Color(UI_ACCENT.r, UI_ACCENT.g, UI_ACCENT.b, 0.45)
-	rule.position = Vector2(0, 84)
-	rule.size = Vector2(view.x, 1)
-	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(rule)
-	var hp_back := Panel.new()
-	hp_back.position = Vector2(30, 52)
-	hp_back.size = Vector2(240, 14)
-	hp_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hp_back.add_theme_stylebox_override("panel", _slanted_box(Color(0.3, 0.06, 0.1, 0.9), Color(1.0, 0.3, 0.35, 0.6), 1))
-	root.add_child(hp_back)
-	hp_fill = Panel.new()
-	hp_fill.position = Vector2(30, 52)
-	hp_fill.size = Vector2(240, 14)
-	hp_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hp_fill.add_theme_stylebox_override("panel", _slanted_box(Color(1.0, 0.3, 0.38), Color(0, 0, 0, 0), 0))
-	root.add_child(hp_fill)
-	hp_label = _label(root, "HP  100 / 100", Vector2(28, 12), Vector2(250, 32), 22)
-	level_label = _label(root, "レベル  1", Vector2(310, 12), Vector2(200, 32), 22)
-	var xp_back := Panel.new()
-	xp_back.position = Vector2(312, 52)
-	xp_back.size = Vector2(180, 14)
-	xp_back.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	xp_back.add_theme_stylebox_override("panel", _slanted_box(Color(0.04, 0.2, 0.18, 0.9), Color(Palette.GEM.r, Palette.GEM.g, Palette.GEM.b, 0.6), 1))
-	root.add_child(xp_back)
-	xp_fill = Panel.new()
-	xp_fill.position = xp_back.position
-	xp_fill.size = xp_back.size
-	xp_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	xp_fill.add_theme_stylebox_override("panel", _slanted_box(Palette.GEM, Color(0, 0, 0, 0), 0))
-	root.add_child(xp_fill)
-	time_label = _label(root, "3:00", Vector2(520, 8), Vector2(150, 44), 34)
-	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var time_caption := _label(root, "残り時間", Vector2(520, 50), Vector2(150, 24), 15)
-	time_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	time_caption.add_theme_color_override("font_color", Color(0.7, 0.85, 0.95, 0.75))
-	score_label = _label(root, "0", Vector2(680, 8), Vector2(180, 44), 30)
-	score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	score_label.add_theme_color_override("font_color", Color(1.0, 0.88, 0.45))
-	var score_caption := _label(root, "SCORE", Vector2(680, 50), Vector2(180, 24), 15)
-	score_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	score_caption.add_theme_color_override("font_color", Color(0.7, 0.85, 0.95, 0.75))
-	for i in Balance.MAX_WEAPONS:
-		hud_weapon_icons.append(_make_icon(root, Vector2(890 + i * 50, 14), 40.0))
-	for i in Balance.MAX_PASSIVES:
-		hud_passive_icons.append(_make_icon(root, Vector2(1066 + i * 50, 14), 40.0))
-	var divider := ColorRect.new()
-	divider.color = Color(UI_ACCENT.r, UI_ACCENT.g, UI_ACCENT.b, 0.3)
-	divider.position = Vector2(1048, 16)
-	divider.size = Vector2(1, 52)
-	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(divider)
-	var hint := _label(root, "WASD / 方向キーで移動    武器は自動で攻撃    Esc でポーズ", Vector2(0, view.y - 36), Vector2(view.x, 28), 18)
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_color_override("font_color", Color(0.7, 0.85, 0.95, 0.75))
-
-
-func _build_upgrade_ui() -> void:
-	upgrade_layer = CanvasLayer.new()
-	upgrade_layer.name = "Upgrade"
-	upgrade_layer.layer = 20
-	upgrade_layer.visible = false
+func _build_ui() -> void:
+	hud_layer = HudScene.instantiate()
+	add_child(hud_layer)
+	upgrade_layer = LevelUpScene.instantiate()
+	upgrade_layer.chosen.connect(_on_choice_pressed)
 	add_child(upgrade_layer)
-	var root := Control.new()
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	upgrade_layer.add_child(root)
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.add_child(_overlay())
-	root.add_child(_panel(Vector2(290, 115), Vector2(700, 490)))
-	var title := _label(root, "レベルアップ", Vector2(290, 138), Vector2(700, 52), 36)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_color_override("font_color", Palette.GEM)
-	var hint := _label(root, "1つ選んでください（武器・パッシブ各3枠 / 武器はLv5の次にスペシャル）", Vector2(290, 192), Vector2(700, 32), 19)
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_color_override("font_color", Color(0.75, 0.88, 0.95))
-	for i in 3:
-		var button := _choice_button(root, "", Vector2(350, 245 + i * 112))
-		button.size = Vector2(580, 92)
-		button.custom_minimum_size = button.size
-		var icon := _make_icon(button, Vector2(30, 13), 50.0)
-		var heading := _label(button, "", Vector2(100, 10), Vector2(460, 36), 23)
-		var detail := _label(button, "", Vector2(100, 50), Vector2(460, 30), 16)
-		detail.add_theme_color_override("font_color", Color(0.75, 0.9, 1.0))
-		button.set_meta("icon", icon)
-		button.set_meta("heading", heading)
-		button.set_meta("detail", detail)
-		button.pressed.connect(_on_choice_pressed.bind(i))
-		choice_buttons.append(button)
-
-
-func _build_game_over_ui() -> void:
-	game_over_layer = CanvasLayer.new()
-	game_over_layer.name = "GameOver"
-	game_over_layer.layer = 30
-	game_over_layer.visible = false
+	game_over_layer = GameOverScene.instantiate()
+	game_over_layer.restart_requested.connect(_restart)
+	game_over_layer.title_requested.connect(_back_to_title)
 	add_child(game_over_layer)
-	var root := Control.new()
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	game_over_layer.add_child(root)
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.add_child(_overlay())
-	root.add_child(_panel(Vector2(350, 110), Vector2(580, 500)))
-	go_title = _label(root, "", Vector2(350, 138), Vector2(580, 56), 40)
-	go_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	go_score = _label(root, "0", Vector2(350, 190), Vector2(580, 80), 64)
-	go_score.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	go_score.add_theme_color_override("font_color", Color(1.0, 0.88, 0.45))
-	go_best = _label(root, "", Vector2(350, 268), Vector2(580, 32), 22)
-	go_best.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	go_stats = _label(root, "", Vector2(350, 308), Vector2(580, 90), 19)
-	go_stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	go_stats.add_theme_color_override("font_color", Color(0.75, 0.88, 0.95))
-	btn_restart = _choice_button(root, "もう一度（Enter）", Vector2(410, 420))
-	btn_restart.pressed.connect(_restart)
-	btn_go_title = _choice_button(root, "タイトルへ", Vector2(410, 492))
-	btn_go_title.pressed.connect(_back_to_title)
-
-
-func _build_pause_ui() -> void:
-	pause_layer = CanvasLayer.new()
-	pause_layer.name = "Pause"
-	pause_layer.layer = 25
-	pause_layer.visible = false
+	pause_layer = PauseScene.instantiate()
+	pause_layer.resume_requested.connect(_resume)
+	pause_layer.title_requested.connect(_back_to_title)
 	add_child(pause_layer)
-	var root := Control.new()
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	pause_layer.add_child(root)
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.add_child(_overlay())
-	root.add_child(_panel(Vector2(390, 185), Vector2(500, 350)))
-	var title := _label(root, "ポーズ", Vector2(390, 215), Vector2(500, 60), 40)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_color_override("font_color", UI_ACCENT)
-	var hint := _label(root, "Esc / P で再開", Vector2(390, 280), Vector2(500, 30), 18)
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.add_theme_color_override("font_color", Color(0.75, 0.88, 0.95))
-	btn_resume = _choice_button(root, "再開", Vector2(410, 335))
-	btn_resume.pressed.connect(_resume)
-	btn_pause_title = _choice_button(root, "タイトルへ", Vector2(410, 407))
-	btn_pause_title.pressed.connect(_back_to_title)
-
-
-func _build_title_ui() -> void:
-	title_layer = CanvasLayer.new()
-	title_layer.name = "Title"
-	title_layer.layer = 40
+	title_layer = TitleScene.instantiate()
+	title_layer.start_requested.connect(_start_game)
+	title_layer.quit_requested.connect(_quit)
+	title_layer.ranking_requested.connect(_show_ranking)
 	add_child(title_layer)
-	var root := Control.new()
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	title_layer.add_child(root)
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var view := get_viewport_rect().size
-	# The logo itself is drawn by title_deco, in the world layer where glow applies.
-	if scores.best > 0:
-		var hi := _label(root, "HI-SCORE  %d" % scores.best, Vector2(0, 352), Vector2(view.x, 30), 20)
-		hi.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		hi.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
-	btn_start = _choice_button(root, "スタート", Vector2(410, 400))
-	btn_start.pressed.connect(_start_game)
-	var btn_ranking := _choice_button(root, "ハイスコア", Vector2(410, 470))
-	btn_ranking.pressed.connect(_show_ranking.bind(true))
-	btn_quit = _choice_button(root, "終了", Vector2(410, 540))
-	btn_quit.pressed.connect(_quit)
-	var controls := _label(root, "移動  WASD / 方向キー      攻撃  自動      ポーズ  Esc      Enter / Space でスタート", Vector2(0, view.y - 44), Vector2(view.x, 28), 17)
-	controls.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	controls.add_theme_color_override("font_color", Color(0.7, 0.85, 0.95, 0.8))
-	_build_ranking_ui()
-
-
-func _build_ranking_ui() -> void:
-	ranking_root = Control.new()
-	ranking_root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	ranking_root.visible = false
-	title_layer.add_child(ranking_root)
-	ranking_root.add_child(_overlay())
-	ranking_root.add_child(_panel(Vector2(290, 50), Vector2(700, 620)))
-	var heading := _label(ranking_root, "HIGH SCORE  TOP %d" % ScoreStore.MAX_RECORDS, Vector2(290, 72), Vector2(700, 48), 32)
-	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	heading.add_theme_color_override("font_color", UI_ACCENT)
-	var header_color := Color(0.6, 0.75, 0.85)
-	for column in [["順位", 330.0, 70.0, HORIZONTAL_ALIGNMENT_CENTER], ["スコア", 410.0, 190.0, HORIZONTAL_ALIGNMENT_RIGHT],
-			["結果", 630.0, 100.0, HORIZONTAL_ALIGNMENT_CENTER], ["日時", 750.0, 200.0, HORIZONTAL_ALIGNMENT_LEFT]]:
-		var label := _label(ranking_root, column[0], Vector2(column[1], 132), Vector2(column[2], 26), 16)
-		label.horizontal_alignment = column[3]
-		label.add_theme_color_override("font_color", header_color)
-	ranking_rows = Control.new()
-	ranking_rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	ranking_root.add_child(ranking_rows)
-	var back := _choice_button(ranking_root, "戻る（Esc）", Vector2(410, 590))
-	back.pressed.connect(_show_ranking.bind(false))
+	title_layer.set_best(scores.best)
 
 
 func _show_ranking(open: bool) -> void:
-	ranking_root.visible = open
+	title_layer.show_ranking(open, scores.records)
 	title_deco.visible = not open
-	if not open:
-		return
-	for child in ranking_rows.get_children():
-		child.queue_free()
-	var records := scores.records
-	if records.is_empty():
-		var empty := _label(ranking_rows, "まだ記録がありません", Vector2(290, 300), Vector2(700, 32), 22)
-		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		empty.add_theme_color_override("font_color", Color(0.6, 0.7, 0.8))
-		return
-	var medal := [Color(1.0, 0.85, 0.35), Color(0.85, 0.9, 0.98), Color(1.0, 0.65, 0.4)]
-	for i in records.size():
-		var entry: Dictionary = records[i]
-		var y := 166.0 + float(i) * 40.0
-		var color: Color = medal[i] if i < medal.size() else Color(0.92, 0.95, 0.98)
-		var cleared_run := bool(entry.get("cleared", false))
-		var cells := [
-			["%d" % (i + 1), 330.0, 70.0, HORIZONTAL_ALIGNMENT_CENTER, color],
-			["%d" % int(entry["score"]), 410.0, 190.0, HORIZONTAL_ALIGNMENT_RIGHT, color],
-			["CLEAR" if cleared_run else _format_time(float(entry.get("time", 0.0))), 630.0, 100.0, HORIZONTAL_ALIGNMENT_CENTER,
-				Palette.GEM if cleared_run else Color(0.7, 0.75, 0.85)],
-			[str(entry.get("date", "")).replace("-", "/"), 750.0, 200.0, HORIZONTAL_ALIGNMENT_LEFT, Color(0.7, 0.8, 0.9)],
-		]
-		for cell in cells:
-			var label := _label(ranking_rows, cell[0], Vector2(cell[1], y), Vector2(cell[2], 34), 22 if i < 3 else 20)
-			label.horizontal_alignment = cell[3]
-			label.add_theme_color_override("font_color", cell[4])
-
-
-func _refresh_upgrade_buttons() -> void:
-	for i in choice_buttons.size():
-		var button := choice_buttons[i]
-		button.visible = i < level_choices.size()
-		if not button.visible:
-			continue
-		var icon = button.get_meta("icon")
-		var heading: Label = button.get_meta("heading")
-		var detail: Label = button.get_meta("detail")
-		var id := level_choices[i]
-		var parts := id.split(":")
-		var is_weapon := parts[0] == "weapon"
-		var data: Dictionary = Balance.WEAPONS[parts[1]] if is_weapon else Balance.PASSIVES[parts[1]]
-		var stage := item_level(id)
-		icon.configure(parts[1], is_weapon, stage + 1, true)
-		if is_weapon and stage == Balance.MAX_STAGE:
-			heading.text = "★ %s  スペシャル：%s" % [data["name"], data["special"]]
-			detail.text = data["special_desc"]
-			heading.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
-		elif is_weapon and stage + 1 == Balance.MILESTONE_STAGE:
-			heading.text = "◆ %s  強化：%s" % [data["name"], data["milestone"]]
-			detail.text = data["milestone_desc"]
-			heading.add_theme_color_override("font_color", Color(0.55, 0.9, 1.0))
-		elif stage == 0:
-			heading.text = "%s   NEW" % data["name"]
-			detail.text = data["desc"] if is_weapon else _stats_detail(data, 0, 1)
-			heading.add_theme_color_override("font_color", Palette.GEM)
-		else:
-			heading.text = data["name"]
-			# Weapon stat arrays start at Lv1, passive arrays at stage 0.
-			var offset := 1 if is_weapon else 0
-			detail.text = _stats_detail(data, stage - offset, stage + 1 - offset)
-			heading.add_theme_color_override("font_color", Color(0.96, 0.97, 0.98))
-
-
-# Names only the stats that change between the two indices.
-func _stats_detail(data: Dictionary, before_index: int, after_index: int) -> String:
-	var parts: Array[String] = []
-	for entry: Array in data["stats"]:
-		var values: Array = data[entry[0]]
-		if values[before_index] != values[after_index]:
-			parts.append(entry[1])
-	return "・".join(parts)
-
-
-func _make_icon(parent: Node, pos: Vector2, icon_size: float) -> Control:
-	var icon := ItemIconScript.new()
-	icon.icon_size = icon_size
-	icon.position = pos
-	parent.add_child(icon)
-	return icon
 
 
 func _update_hud() -> void:
-	var current := int(player.hp)
-	var maximum := int(player.max_hp)
-	hp_label.text = "HP  %d / %d" % [current, maximum]
-	level_label.text = "レベル  %d" % level
-	var xp_ratio := clampf(float(xp) / float(maxi(1, xp_to_next)), 0.0, 1.0)
-	xp_fill.size.x = 180.0 * xp_ratio
-	xp_fill.visible = xp_ratio > 0.0
-	var remaining := _remaining()
-	time_label.text = _format_time(ceilf(remaining))
-	if remaining <= Balance.LAST_SPURT and phase != Phase.GAME_OVER:
-		var pulse := 0.75 + 0.25 * sin(elapsed * 8.0)
-		time_label.add_theme_color_override("font_color", Color(1.0, 0.35 * pulse + 0.1, 0.35 * pulse + 0.1))
-	else:
-		time_label.add_theme_color_override("font_color", Color(0.96, 0.97, 0.98))
-	score_label.text = "%d" % score
-	var weapon_ids := weapons.keys()
-	for i in hud_weapon_icons.size():
-		if i < weapon_ids.size():
-			hud_weapon_icons[i].configure(weapon_ids[i], true, weapons[weapon_ids[i]].level)
-		else:
-			hud_weapon_icons[i].configure("", true, 0)
-	var passive_ids := passives.keys()
-	for i in hud_passive_icons.size():
-		if i < passive_ids.size():
-			hud_passive_icons[i].configure(passive_ids[i], false, int(passives[passive_ids[i]]))
-		else:
-			hud_passive_icons[i].configure("", false, 0)
-	var ratio := 0.0 if maximum <= 0 else clampf(float(current) / float(maximum), 0.0, 1.0)
-	hp_fill.size.x = 240.0 * ratio
-	hp_fill.visible = ratio > 0.0
-	hp_fill.modulate = Color.WHITE if ratio > 0.3 else Color(1.0, 1.8, 0.5)
+	hud_layer.refresh(self)
 
-
-func _format_time(t: float) -> String:
-	var total := maxi(0, int(t))
-	return "%d:%02d" % [total / 60, total % 60]
-
-
-func _make_font() -> Font:
-	var preferred := ["Yu Gothic UI", "Yu Gothic", "Meiryo UI", "Meiryo", "MS Gothic", "Segoe UI"]
-	var font := SystemFont.new()
-	for font_name in preferred:
-		var path := OS.get_system_font_path(font_name)
-		if path != "":
-			font.font_names = PackedStringArray([font_name])
-			return font
-	return font
-
-
-func _label(parent: Node, text: String, pos: Vector2, size: Vector2, font_size: int) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.position = pos
-	label.size = size
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.add_theme_font_override("font", ui_font)
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", Color(0.96, 0.97, 0.98))
-	parent.add_child(label)
-	return label
-
-
-func _overlay() -> ColorRect:
-	var overlay := ColorRect.new()
-	overlay.color = Color(0.0, 0.01, 0.04, 0.85)
-	overlay.position = Vector2.ZERO
-	overlay.size = get_viewport_rect().size
-	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	return overlay
-
-
-func _panel(pos: Vector2, size: Vector2) -> Panel:
-	var panel := Panel.new()
-	panel.position = pos
-	panel.size = size
-	panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	var style := StyleBoxFlat.new()
-	style.bg_color = UI_PANEL
-	style.border_color = UI_ACCENT
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(22)
-	# A corner detail of 1 turns the rounded corners into straight chamfers.
-	style.corner_detail = 1
-	style.shadow_color = Color(UI_ACCENT.r, UI_ACCENT.g, UI_ACCENT.b, 0.18)
-	style.shadow_size = 18
-	panel.add_theme_stylebox_override("panel", style)
-	return panel
-
-
-func _slanted_box(fill: Color, border: Color, border_width: int) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = fill
-	style.border_color = border
-	style.set_border_width_all(border_width)
-	style.skew = Vector2(0.35, 0.0)
-	return style
-
-
-func _choice_button(parent: Node, text: String, pos: Vector2) -> Button:
-	var button := Button.new()
-	button.text = text
-	button.position = pos
-	button.size = Vector2(460, 58)
-	button.custom_minimum_size = Vector2(460, 58)
-	button.focus_mode = Control.FOCUS_NONE
-	button.add_theme_font_override("font", ui_font)
-	button.add_theme_font_size_override("font_size", 22)
-	button.add_theme_color_override("font_color", Color.WHITE)
-	button.add_theme_color_override("font_hover_color", Color.WHITE)
-	button.add_theme_color_override("font_pressed_color", Color(0.95, 0.95, 0.95))
-	var normal := _slanted_box(Color(0.06, 0.16, 0.24, 0.95), Color(UI_ACCENT.r, UI_ACCENT.g, UI_ACCENT.b, 0.7), 2)
-	normal.skew = Vector2(0.25, 0.0)
-	var hover := normal.duplicate() as StyleBoxFlat
-	hover.bg_color = Color(0.1, 0.32, 0.45, 0.98)
-	hover.border_color = UI_ACCENT
-	hover.shadow_color = Color(UI_ACCENT.r, UI_ACCENT.g, UI_ACCENT.b, 0.35)
-	hover.shadow_size = 10
-	var pressed := normal.duplicate() as StyleBoxFlat
-	pressed.bg_color = Color(0.2, 0.55, 0.7)
-	button.add_theme_stylebox_override("normal", normal)
-	button.add_theme_stylebox_override("hover", hover)
-	button.add_theme_stylebox_override("pressed", pressed)
-	parent.add_child(button)
-	return button

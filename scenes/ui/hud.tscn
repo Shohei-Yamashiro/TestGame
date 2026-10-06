@@ -1,0 +1,233 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
+[ext_resource type="Theme" path="res://scenes/ui/ui_theme.tres" id="2_theme"]
+[ext_resource type="Script" path="res://scripts/item_icon.gd" id="3_icon"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hp_back"]
+bg_color = Color(0.3, 0.06, 0.1, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.3, 0.35, 0.6)
+skew = Vector2(0.35, 0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hp_fill"]
+bg_color = Color(1, 0.3, 0.38, 1)
+border_color = Color(0, 0, 0, 0)
+skew = Vector2(0.35, 0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xp_back"]
+bg_color = Color(0.04, 0.2, 0.18, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.45, 1, 0.8, 0.6)
+skew = Vector2(0.35, 0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_xp_fill"]
+bg_color = Color(0.45, 1, 0.8, 1)
+border_color = Color(0, 0, 0, 0)
+skew = Vector2(0.35, 0)
+
+[node name="HUD" type="CanvasLayer"]
+layer = 10
+visible = false
+script = ExtResource("1_hud")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("2_theme")
+
+[node name="Shade" type="ColorRect" parent="Root"]
+layout_mode = 0
+offset_right = 1280.0
+offset_bottom = 84.0
+mouse_filter = 2
+color = Color(0.02, 0.03, 0.06, 0.72)
+
+[node name="Rule" type="ColorRect" parent="Root"]
+layout_mode = 0
+offset_top = 84.0
+offset_right = 1280.0
+offset_bottom = 85.0
+mouse_filter = 2
+color = Color(0.35, 0.95, 1, 0.45)
+
+[node name="HpBack" type="Panel" parent="Root"]
+layout_mode = 0
+offset_left = 30.0
+offset_top = 52.0
+offset_right = 270.0
+offset_bottom = 66.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_hp_back")
+
+[node name="HpFill" type="Panel" parent="Root"]
+layout_mode = 0
+offset_left = 30.0
+offset_top = 52.0
+offset_right = 270.0
+offset_bottom = 66.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_hp_fill")
+
+[node name="HpLabel" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 28.0
+offset_top = 12.0
+offset_right = 278.0
+offset_bottom = 44.0
+theme_override_font_sizes/font_size = 22
+text = "HP  100 / 100"
+
+[node name="LevelLabel" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 310.0
+offset_top = 12.0
+offset_right = 510.0
+offset_bottom = 44.0
+theme_override_font_sizes/font_size = 22
+text = "レベル  1"
+
+[node name="XpBack" type="Panel" parent="Root"]
+layout_mode = 0
+offset_left = 312.0
+offset_top = 52.0
+offset_right = 492.0
+offset_bottom = 66.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_xp_back")
+
+[node name="XpFill" type="Panel" parent="Root"]
+layout_mode = 0
+offset_left = 312.0
+offset_top = 52.0
+offset_right = 492.0
+offset_bottom = 66.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_xp_fill")
+
+[node name="TimeLabel" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 520.0
+offset_top = 8.0
+offset_right = 670.0
+offset_bottom = 52.0
+theme_override_font_sizes/font_size = 34
+text = "3:00"
+horizontal_alignment = 1
+
+[node name="TimeCaption" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 520.0
+offset_top = 50.0
+offset_right = 670.0
+offset_bottom = 74.0
+theme_override_colors/font_color = Color(0.7, 0.85, 0.95, 0.75)
+theme_override_font_sizes/font_size = 15
+text = "残り時間"
+horizontal_alignment = 1
+
+[node name="ScoreLabel" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 680.0
+offset_top = 8.0
+offset_right = 860.0
+offset_bottom = 52.0
+theme_override_colors/font_color = Color(1, 0.88, 0.45, 1)
+theme_override_font_sizes/font_size = 30
+text = "0"
+horizontal_alignment = 2
+
+[node name="ScoreCaption" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 680.0
+offset_top = 50.0
+offset_right = 860.0
+offset_bottom = 74.0
+theme_override_colors/font_color = Color(0.7, 0.85, 0.95, 0.75)
+theme_override_font_sizes/font_size = 15
+text = "SCORE"
+horizontal_alignment = 2
+
+[node name="WeaponIcons" type="Control" parent="Root"]
+layout_mode = 0
+offset_left = 890.0
+offset_top = 14.0
+offset_right = 890.0
+offset_bottom = 14.0
+mouse_filter = 2
+
+[node name="Icon0" type="Control" parent="Root/WeaponIcons"]
+layout_mode = 0
+script = ExtResource("3_icon")
+icon_size = 40.0
+
+[node name="Icon1" type="Control" parent="Root/WeaponIcons"]
+layout_mode = 0
+offset_left = 50.0
+offset_right = 50.0
+script = ExtResource("3_icon")
+icon_size = 40.0
+
+[node name="Icon2" type="Control" parent="Root/WeaponIcons"]
+layout_mode = 0
+offset_left = 100.0
+offset_right = 100.0
+script = ExtResource("3_icon")
+icon_size = 40.0
+
+[node name="Divider" type="ColorRect" parent="Root"]
+layout_mode = 0
+offset_left = 1048.0
+offset_top = 16.0
+offset_right = 1049.0
+offset_bottom = 68.0
+mouse_filter = 2
+color = Color(0.35, 0.95, 1, 0.3)
+
+[node name="PassiveIcons" type="Control" parent="Root"]
+layout_mode = 0
+offset_left = 1066.0
+offset_top = 14.0
+offset_right = 1066.0
+offset_bottom = 14.0
+mouse_filter = 2
+
+[node name="Icon0" type="Control" parent="Root/PassiveIcons"]
+layout_mode = 0
+script = ExtResource("3_icon")
+icon_size = 40.0
+
+[node name="Icon1" type="Control" parent="Root/PassiveIcons"]
+layout_mode = 0
+offset_left = 50.0
+offset_right = 50.0
+script = ExtResource("3_icon")
+icon_size = 40.0
+
+[node name="Icon2" type="Control" parent="Root/PassiveIcons"]
+layout_mode = 0
+offset_left = 100.0
+offset_right = 100.0
+script = ExtResource("3_icon")
+icon_size = 40.0
+
+[node name="Hint" type="Label" parent="Root"]
+layout_mode = 0
+offset_top = 684.0
+offset_right = 1280.0
+offset_bottom = 712.0
+theme_override_colors/font_color = Color(0.7, 0.85, 0.95, 0.75)
+theme_override_font_sizes/font_size = 18
+text = "WASD / 方向キーで移動    武器は自動で攻撃    Esc でポーズ"
+horizontal_alignment = 1
