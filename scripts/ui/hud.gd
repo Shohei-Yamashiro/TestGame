@@ -7,7 +7,6 @@ const HP_WIDTH := 240.0
 const XP_WIDTH := 180.0
 const TEXT_COLOR := Color(0.96, 0.97, 0.98)
 
-@onready var _hp_label: Label = $Root/HpLabel
 @onready var _level_label: Label = $Root/LevelLabel
 @onready var _time_label: Label = $Root/TimeLabel
 @onready var _score_label: Label = $Root/ScoreLabel
@@ -20,7 +19,6 @@ const TEXT_COLOR := Color(0.96, 0.97, 0.98)
 func refresh(game) -> void:
 	var current := int(game.player.hp)
 	var maximum := int(game.player.max_hp)
-	_hp_label.text = "HP  %d / %d" % [current, maximum]
 	_level_label.text = "レベル  %d" % game.level
 	var xp_ratio := clampf(float(game.xp) / float(maxi(1, game.xp_to_next)), 0.0, 1.0)
 	_xp_fill.size.x = XP_WIDTH * xp_ratio
@@ -32,7 +30,7 @@ func refresh(game) -> void:
 		_time_label.add_theme_color_override("font_color", Color(1.0, 0.35 * pulse + 0.1, 0.35 * pulse + 0.1))
 	else:
 		_time_label.add_theme_color_override("font_color", TEXT_COLOR)
-	_score_label.text = "%d" % game.score
+	_score_label.text = "SCORE  %d" % game.score
 	var weapon_ids: Array = game.weapons.keys()
 	for i in _weapon_icons.size():
 		if i < weapon_ids.size():
