@@ -23,60 +23,62 @@ const MAX_STAGE := 5
 const SPECIAL_STAGE := 6
 const HEAL_AMOUNT := 35
 
+# "stats" entries are [key, level-up text, short label for the library table].
+
 # --- Passives: arrays are indexed by stage, so index 0 is the value before the passive is taken ---
 const PASSIVE_ORDER := ["attack", "rate", "move", "magnet", "max_hp", "regen", "area", "armor", "growth", "knock"]
 const PASSIVES := {
 	"attack": {
 		"name": "攻撃力",
 		"damage": [1.0, 1.2, 1.4, 1.65, 1.9, 2.2],
-		"stats": [["damage", "全武器のダメージが増加"]],
+		"stats": [["damage", "全武器のダメージが増加", "ダメージ倍率"]],
 	},
 	"rate": {
 		"name": "攻撃速度",
 		"cooldown": [1.0, 0.9, 0.82, 0.75, 0.68, 0.62],
-		"stats": [["cooldown", "全武器の攻撃間隔が短縮"]],
+		"stats": [["cooldown", "全武器の攻撃間隔が短縮", "攻撃間隔倍率"]],
 	},
 	"move": {
 		"name": "移動速度",
 		"speed": [230.0, 245.0, 260.0, 275.0, 290.0, 310.0],
-		"stats": [["speed", "移動速度が増加"]],
+		"stats": [["speed", "移動速度が増加", "移動速度"]],
 	},
 	"magnet": {
 		"name": "回収範囲",
 		"magnet": [BASE_MAGNET, 215.0, 255.0, 300.0, 350.0, 420.0],
-		"stats": [["magnet", "経験値を引き寄せる範囲が拡大"]],
+		"stats": [["magnet", "経験値を引き寄せる範囲が拡大", "回収半径"]],
 	},
 	"max_hp": {
 		"name": "最大HP",
 		"max_hp": [PLAYER_MAX_HP, 115, 130, 150, 170, 200],
-		"stats": [["max_hp", "最大HPが増加（増えた分だけ回復）"]],
+		"stats": [["max_hp", "最大HPが増加（増えた分だけ回復）", "最大HP"]],
 	},
 	"regen": {
 		"name": "再生",
 		# HP per second.
 		"regen": [0.0, 0.4, 0.7, 1.0, 1.4, 1.8],
-		"stats": [["regen", "HPが少しずつ回復"]],
+		"stats": [["regen", "HPが少しずつ回復", "毎秒回復量"]],
 	},
 	"area": {
 		"name": "効果範囲",
 		"area": [1.0, 1.1, 1.2, 1.3, 1.4, 1.55],
-		"stats": [["area", "ノヴァ・周回・翼・爆発の範囲とレーザーの太さが拡大"]],
+		"stats": [["area", "ノヴァ・周回・翼・爆発の範囲とレーザーの太さが拡大", "範囲倍率"]],
 	},
 	"armor": {
 		"name": "装甲",
 		# Fraction of incoming damage removed.
 		"armor": [0.0, 0.06, 0.12, 0.18, 0.24, 0.3],
-		"stats": [["armor", "受けるダメージを軽減"]],
+		"stats": [["armor", "受けるダメージを軽減", "軽減率"]],
 	},
 	"growth": {
 		"name": "成長",
 		"xp": [1.0, 1.1, 1.2, 1.3, 1.45, 1.6],
-		"stats": [["xp", "獲得経験値が増加"]],
+		"stats": [["xp", "獲得経験値が増加", "経験値倍率"]],
 	},
 	"knock": {
 		"name": "衝撃",
 		"knock": [1.0, 1.25, 1.5, 1.75, 2.0, 2.4],
-		"stats": [["knock", "ノックバックが強くなる"]],
+		"stats": [["knock", "ノックバックが強くなる", "ノックバック倍率"]],
 	},
 }
 const BLASTER_SPECIAL_PIERCE := 3
@@ -92,7 +94,7 @@ const WEAPONS := {
 		"desc": "一番近い敵へ弾を連射する",
 		"damage": [10, 13, 16, 20, 25],
 		"interval": [0.30, 0.27, 0.24, 0.21, 0.18],
-		"stats": [["damage", "ダメージが増加"], ["interval", "攻撃間隔が短縮"]],
+		"stats": [["damage", "ダメージが増加", "ダメージ"], ["interval", "攻撃間隔が短縮", "攻撃間隔"]],
 		"milestone": "マルチロック",
 		"milestone_desc": "近い敵を2体まで同時に狙って撃つ",
 		"special": "3連ロック・貫通弾",
@@ -104,7 +106,7 @@ const WEAPONS := {
 		"damage": [6, 8, 9, 11, 13],
 		"count": [3, 3, 4, 4, 5],
 		"interval": [1.4, 1.3, 1.2, 1.1, 1.0],
-		"stats": [["damage", "ダメージが増加"], ["count", "発射数が増加"], ["interval", "攻撃間隔が短縮"]],
+		"stats": [["damage", "ダメージが増加", "ダメージ"], ["count", "発射数が増加", "発射数"], ["interval", "攻撃間隔が短縮", "攻撃間隔"]],
 		"milestone": "貫通ミサイル",
 		"milestone_desc": "ミサイルが敵を2体まで貫通する",
 		"special": "爆裂弾",
@@ -115,7 +117,7 @@ const WEAPONS := {
 		"desc": "自機の周りを回る刃が触れた敵を切り、敵の弾を消す",
 		"damage": [7, 9, 11, 13, 16],
 		"count": [2, 2, 3, 3, 4],
-		"stats": [["damage", "ダメージが増加"], ["count", "刃の数が増加"]],
+		"stats": [["damage", "ダメージが増加", "ダメージ"], ["count", "刃の数が増加", "刃の数"]],
 		"milestone": "大型ブレード",
 		"milestone_desc": "刃が大きくなり、当たる範囲が広がる",
 		"special": "拡大リング",
@@ -127,7 +129,7 @@ const WEAPONS := {
 		"damage": [8, 10, 13, 16, 20],
 		"radius": [110.0, 120.0, 135.0, 150.0, 165.0],
 		"interval": [3.2, 3.0, 2.8, 2.6, 2.4],
-		"stats": [["damage", "ダメージが増加"], ["radius", "範囲が拡大"], ["interval", "攻撃間隔が短縮"]],
+		"stats": [["damage", "ダメージが増加", "ダメージ"], ["radius", "範囲が拡大", "半径"], ["interval", "攻撃間隔が短縮", "攻撃間隔"]],
 		"milestone": "減速波",
 		"milestone_desc": "波に当たった敵の移動速度を一定時間下げる",
 		"special": "電磁シールド",
@@ -140,7 +142,7 @@ const WEAPONS := {
 		"reach": [130.0, 145.0, 160.0, 175.0, 190.0],
 		"interval": [2.0, 1.85, 1.7, 1.55, 1.4],
 		"feathers": [2, 2, 3, 3, 4],
-		"stats": [["damage", "ダメージが増加"], ["reach", "範囲が拡大"], ["interval", "攻撃間隔が短縮"], ["feathers", "羽根が増える"]],
+		"stats": [["damage", "ダメージが増加", "ダメージ"], ["reach", "範囲が拡大", "射程"], ["interval", "攻撃間隔が短縮", "攻撃間隔"], ["feathers", "羽根が増える", "羽根の数"]],
 		"milestone": "前方なぎ払い",
 		"milestone_desc": "羽ばたきの後、翼を振り抜いて前方もなぎ払う",
 		"special": "常時展開",
@@ -152,7 +154,7 @@ const WEAPONS := {
 		"damage": [20, 26, 33, 41, 50],
 		"width": [12.0, 13.0, 15.0, 16.0, 18.0],
 		"interval": [2.0, 1.8, 1.6, 1.45, 1.3],
-		"stats": [["damage", "ダメージが増加"], ["width", "ビームが太くなる"], ["interval", "攻撃間隔が短縮"]],
+		"stats": [["damage", "ダメージが増加", "ダメージ"], ["width", "ビームが太くなる", "太さ"], ["interval", "攻撃間隔が短縮", "攻撃間隔"]],
 		"milestone": "前後レーザー",
 		"milestone_desc": "前と後ろの2方向に同時に照射する",
 		"special": "十字レーザー",

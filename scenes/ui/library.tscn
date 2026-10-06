@@ -1,0 +1,229 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/library.gd" id="1_library"]
+[ext_resource type="Theme" path="res://scenes/ui/ui_theme.tres" id="2_theme"]
+[ext_resource type="Script" path="res://scripts/item_icon.gd" id="3_icon"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tile"]
+bg_color = Color(0.05, 0.09, 0.15, 0.9)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.35, 0.95, 1, 0.25)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+corner_detail = 1
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tile_hover"]
+bg_color = Color(0.08, 0.2, 0.3, 0.95)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.35, 0.95, 1, 0.7)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+corner_detail = 1
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tile_selected"]
+bg_color = Color(0.1, 0.32, 0.45, 0.98)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.35, 0.95, 1, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+corner_detail = 1
+shadow_color = Color(0.35, 0.95, 1, 0.3)
+shadow_size = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_box"]
+bg_color = Color(0.06, 0.1, 0.17, 0.85)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.35, 0.95, 1, 0.3)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+corner_detail = 1
+content_margin_left = 14.0
+content_margin_top = 8.0
+content_margin_right = 14.0
+content_margin_bottom = 8.0
+
+[node name="Library" type="CanvasLayer"]
+layer = 45
+visible = false
+script = ExtResource("1_library")
+tile_style = SubResource("StyleBoxFlat_tile")
+tile_hover_style = SubResource("StyleBoxFlat_tile_hover")
+tile_selected_style = SubResource("StyleBoxFlat_tile_selected")
+
+[node name="Root" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme = ExtResource("2_theme")
+
+[node name="Overlay" type="ColorRect" parent="Root"]
+layout_mode = 0
+offset_right = 1280.0
+offset_bottom = 720.0
+color = Color(0, 0.01, 0.04, 0.85)
+
+[node name="Frame" type="Panel" parent="Root"]
+layout_mode = 0
+offset_left = 60.0
+offset_top = 30.0
+offset_right = 1220.0
+offset_bottom = 690.0
+theme_type_variation = &"FramePanel"
+
+[node name="Title" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 60.0
+offset_top = 46.0
+offset_right = 1220.0
+offset_bottom = 94.0
+theme_override_colors/font_color = Color(0.35, 0.95, 1, 1)
+theme_override_font_sizes/font_size = 32
+text = "ライブラリ"
+horizontal_alignment = 1
+
+[node name="WeaponHeader" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 100.0
+offset_top = 106.0
+offset_right = 440.0
+offset_bottom = 134.0
+theme_override_colors/font_color = Color(0.6, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 18
+text = "武器"
+
+[node name="WeaponTiles" type="Control" parent="Root"]
+layout_mode = 0
+offset_left = 100.0
+offset_top = 138.0
+offset_right = 100.0
+offset_bottom = 138.0
+mouse_filter = 2
+
+[node name="PassiveHeader" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 100.0
+offset_top = 316.0
+offset_right = 440.0
+offset_bottom = 344.0
+theme_override_colors/font_color = Color(0.6, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 18
+text = "パッシブ"
+
+[node name="PassiveTiles" type="Control" parent="Root"]
+layout_mode = 0
+offset_left = 100.0
+offset_top = 348.0
+offset_right = 100.0
+offset_bottom = 348.0
+mouse_filter = 2
+
+[node name="Divider" type="ColorRect" parent="Root"]
+layout_mode = 0
+offset_left = 474.0
+offset_top = 110.0
+offset_right = 475.0
+offset_bottom = 596.0
+mouse_filter = 2
+color = Color(0.35, 0.95, 1, 0.25)
+
+[node name="Detail" type="Control" parent="Root"]
+layout_mode = 0
+offset_left = 500.0
+offset_top = 106.0
+offset_right = 1190.0
+offset_bottom = 600.0
+mouse_filter = 2
+
+[node name="Icon" type="Control" parent="Root/Detail"]
+layout_mode = 0
+script = ExtResource("3_icon")
+icon_size = 64.0
+
+[node name="Name" type="Label" parent="Root/Detail"]
+layout_mode = 0
+offset_left = 86.0
+offset_top = 2.0
+offset_right = 690.0
+offset_bottom = 46.0
+theme_override_font_sizes/font_size = 30
+
+[node name="Kind" type="Label" parent="Root/Detail"]
+layout_mode = 0
+offset_left = 88.0
+offset_top = 46.0
+offset_right = 690.0
+offset_bottom = 70.0
+theme_override_colors/font_color = Color(0.6, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 16
+
+[node name="Desc" type="Label" parent="Root/Detail"]
+layout_mode = 0
+offset_top = 90.0
+offset_right = 690.0
+offset_bottom = 140.0
+theme_override_colors/font_color = Color(0.75, 0.88, 0.95, 1)
+theme_override_font_sizes/font_size = 19
+autowrap_mode = 3
+
+[node name="Table" type="GridContainer" parent="Root/Detail"]
+layout_mode = 0
+offset_top = 150.0
+offset_right = 690.0
+offset_bottom = 300.0
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 2
+columns = 6
+
+[node name="Milestone" type="Label" parent="Root/Detail"]
+layout_mode = 0
+offset_top = 320.0
+offset_right = 690.0
+offset_bottom = 396.0
+theme_override_colors/font_color = Color(0.55, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("StyleBoxFlat_box")
+autowrap_mode = 3
+
+[node name="Special" type="Label" parent="Root/Detail"]
+layout_mode = 0
+offset_top = 406.0
+offset_right = 690.0
+offset_bottom = 482.0
+theme_override_colors/font_color = Color(1, 0.85, 0.35, 1)
+theme_override_font_sizes/font_size = 17
+theme_override_styles/normal = SubResource("StyleBoxFlat_box")
+autowrap_mode = 3
+
+[node name="Back" type="Button" parent="Root"]
+custom_minimum_size = Vector2(460, 58)
+layout_mode = 0
+offset_left = 410.0
+offset_top = 612.0
+offset_right = 870.0
+offset_bottom = 670.0
+focus_mode = 0
+text = "戻る（Esc）"
