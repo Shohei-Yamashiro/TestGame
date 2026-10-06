@@ -86,7 +86,10 @@ Godot の実行ファイルは `-Godot <パス>` か、環境変数 `GODOT` で�
 ```
 scenes/main.tscn        唯一のシーン（ルートに game.gd）
 scripts/
-  game.gd               ゲーム進行・出現・カメラ・UI・スコア保存
+  game.gd               ゲーム進行・敵の押し合い・UI
+  spawner.gd            敵の出現（画面端・包囲リング）と、離れすぎた敵の呼び戻し
+  camera_rig.gd         カメラ（進行方向への先回り・画面の揺れ）
+  score_store.gd        ハイスコア TOP10 の記録と保存
   balance.gd            武器・敵・出現率などの調整値
   palette.gd            色定義とアートルール
   player.gd             自機

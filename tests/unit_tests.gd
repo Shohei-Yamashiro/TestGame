@@ -1,19 +1,28 @@
 extends SceneTree
 
-# Logic regression tests: data tables, art rules, ranking and gem merging.
+# Logic regression tests: data tables, art rules, ranking, camera, spawning and gem merging.
 # Every method named test_* runs; a failed check is reported and the process exits non-zero.
 # Usage: godot --headless --path <project> -s res://tests/unit_tests.gd
 const Balance := preload("res://scripts/balance.gd")
 const Palette := preload("res://scripts/palette.gd")
 const GameScript := preload("res://scripts/game.gd")
 const GemScript := preload("res://scripts/gem.gd")
+const ScoreStore := preload("res://scripts/score_store.gd")
+const CameraRig := preload("res://scripts/camera_rig.gd")
 
 var _current := ""
 var _failures: Array[String] = []
 var _checks := 0
 
 
-func _initialize() -> void:
+# Runs on the first frame rather than in _initialize: only then is the tree live,
+# so nodes added by the tests get their _ready.
+func _process(_delta: float) -> bool:
+	_run_all()
+	return false
+
+
+func _run_all() -> void:
 	seed(1)
 	var tests := 0
 	for method in get_method_list():
@@ -139,39 +148,138 @@ func test_spawn_weights_leave_room_for_triangles() -> void:
 # --- Ranking ---
 
 func test_ranking_order_and_cap() -> void:
-	GameScript.persist_scores = false
-	var game = GameScript.new()
+	ScoreStore.persist = false
+	var store := ScoreStore.new()
 	for value in [300, 100, 200]:
-		game.score = value
-		game._record_score()
-	check(_scores(game) == [300, 200, 100], "ranking is not sorted best first: %s" % [_scores(game)])
-	check(game.best_score == 300, "best_score does not follow the top record")
-	for i in GameScript.MAX_RECORDS:
-		game.score = 1000 + i
-		game._record_score()
-	check(game.records.size() == GameScript.MAX_RECORDS, "ranking is not capped at %d" % GameScript.MAX_RECORDS)
-	game.score = 1
-	check(game._record_score() == -1, "a score below the list should not rank")
-	game.score = 2000
-	check(game._record_score() == 0, "a new best should rank first")
-	game.free()
+		store.record(value, false, 60.0)
+	check(_scores(store) == [300, 200, 100], "ranking is not sorted best first: %s" % [_scores(store)])
+	check(store.best == 300, "best does not follow the top record")
+	for i in ScoreStore.MAX_RECORDS:
+		store.record(1000 + i, true, 180.0)
+	check(store.records.size() == ScoreStore.MAX_RECORDS, "ranking is not capped at %d" % ScoreStore.MAX_RECORDS)
+	check(store.record(1, false, 10.0) == -1, "a score below the list should not rank")
+	check(store.record(2000, true, 180.0) == 0, "a new best should rank first")
 
 
 func test_ranking_tie_keeps_older_first() -> void:
-	GameScript.persist_scores = false
-	var game = GameScript.new()
-	game.score = 500
-	game._record_score()
-	game.score = 500
-	check(game._record_score() == 1, "an equal score should rank below the existing one")
+	ScoreStore.persist = false
+	var store := ScoreStore.new()
+	store.record(500, false, 60.0)
+	check(store.record(500, true, 180.0) == 1, "an equal score should rank below the existing one")
+
+
+func test_ranking_saves_and_loads() -> void:
+	var path := "user://test_save.cfg"
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	ScoreStore.persist = true
+	var store := ScoreStore.new()
+	store.path = path
+	store.record(4200, true, 180.0)
+	store.record(1300, false, 95.5)
+	var loaded := ScoreStore.new()
+	loaded.path = path
+	loaded.load_saved()
+	ScoreStore.persist = false
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	check(_scores(loaded) == [4200, 1300], "saved ranking did not load back: %s" % [_scores(loaded)])
+	check(loaded.best == 4200, "loaded best is wrong")
+	check(bool(loaded.records[0]["cleared"]) and is_equal_approx(float(loaded.records[1]["time"]), 95.5),
+		"record fields did not survive the round trip")
+
+
+func test_ranking_migrates_legacy_best() -> void:
+	var path := "user://test_legacy.cfg"
+	var cfg := ConfigFile.new()
+	cfg.set_value("score", "best", 777)
+	cfg.save(path)
+	ScoreStore.persist = true
+	var store := ScoreStore.new()
+	store.path = path
+	store.load_saved()
+	ScoreStore.persist = false
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	check(_scores(store) == [777], "a save with only a best score should become a single record")
+
+
+func _scores(store) -> Array:
+	var result := []
+	for record in store.records:
+		result.append(int(record["score"]))
+	return result
+
+
+# --- Camera ---
+
+func test_camera_trauma_caps_and_decays() -> void:
+	var camera := CameraRig.new()
+	root.add_child(camera)
+	camera.add_trauma(0.7)
+	camera.add_trauma(0.7)
+	check(is_equal_approx(camera.trauma, 1.0), "trauma should cap at 1.0")
+	for i in 120:
+		camera.update_shake(1.0 / 60.0)
+	check(camera.trauma == 0.0 and camera.offset == Vector2.ZERO, "shake should settle to zero")
+	camera.free()
+
+
+func test_camera_leads_and_holds_when_stopped() -> void:
+	var camera := CameraRig.new()
+	var target := Node2D.new()
+	root.add_child(camera)
+	root.add_child(target)
+	for i in 120:
+		camera.follow(target, Vector2(200, 0), 200.0, 1.0 / 60.0)
+	check(camera.look_offset.x > CameraRig.LOOK_AHEAD.x * 0.9, "camera should lead toward the direction of travel")
+	var lead := camera.look_offset
+	for i in 120:
+		camera.follow(target, Vector2.ZERO, 200.0, 1.0 / 60.0)
+	# Drifting back to centre on its own reads as the ship backing up.
+	check(camera.look_offset.distance_to(lead) < 2.0, "camera should hold its lead while the player stands still")
+	camera.free()
+	target.free()
+
+
+# --- Spawning (with a live game) ---
+
+func _new_game():
+	var game = (load("res://scenes/main.tscn") as PackedScene).instantiate()
+	root.add_child(game)
+	game._start_game()
+	game.elapsed = 120.0
+	return game
+
+
+func test_spawner_caps_shooters() -> void:
+	var game = _new_game()
+	for i in Balance.SHOOTER_MAX + 3:
+		game.spawner.spawn_enemy("shooter", Vector2(500, float(i) * 30.0))
+	var shooters: int = game.get_tree().get_nodes_in_group("shooters").size()
+	var pentas := 0
+	for enemy in game.get_tree().get_nodes_in_group("enemies"):
+		if enemy.kind == "penta":
+			pentas += 1
+	check(shooters == Balance.SHOOTER_MAX, "shooters should stop at %d, got %d" % [Balance.SHOOTER_MAX, shooters])
+	check(pentas == 3, "extra shooters should become pentas, got %d" % pentas)
 	game.free()
 
 
-func _scores(game) -> Array:
-	var result := []
-	for record in game.records:
-		result.append(int(record["score"]))
-	return result
+func test_spawner_respects_enemy_cap() -> void:
+	var game = _new_game()
+	for i in Balance.ENEMY_CAP + 20:
+		game.spawner.spawn_enemy("tri", Vector2(600, float(i)))
+	check(game._enemy_count() == Balance.ENEMY_CAP, "enemy count should stop at the cap, got %d" % game._enemy_count())
+	game.free()
+
+
+func test_spawner_edges_are_off_screen() -> void:
+	var game = _new_game()
+	var view: Rect2 = game.camera.view_rect()
+	for i in 200:
+		var at: Vector2 = game.spawner.edge_spawn_position()
+		check(not view.has_point(at), "edge spawn %s landed on screen" % at)
+		var ahead: Vector2 = game.spawner.edge_position_toward(Vector2.from_angle(float(i)) * 100.0)
+		check(not view.grow(-1.0).has_point(ahead), "leash position %s landed on screen" % ahead)
+	game.free()
 
 
 # --- Gems ---

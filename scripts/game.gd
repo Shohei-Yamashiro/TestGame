@@ -1,7 +1,6 @@
 extends Node2D
 
 const PlayerScript := preload("res://scripts/player.gd")
-const EnemyScript := preload("res://scripts/enemy.gd")
 const GemScript := preload("res://scripts/gem.gd")
 const BackgroundScript := preload("res://scripts/background.gd")
 const FxScript := preload("res://scripts/fx.gd")
@@ -9,6 +8,9 @@ const TitleDecoScript := preload("res://scripts/title_deco.gd")
 const ItemIconScript := preload("res://scripts/item_icon.gd")
 const Palette := preload("res://scripts/palette.gd")
 const Balance := preload("res://scripts/balance.gd")
+const ScoreStore := preload("res://scripts/score_store.gd")
+const Spawner := preload("res://scripts/spawner.gd")
+const CameraRig := preload("res://scripts/camera_rig.gd")
 const WEAPON_SCRIPTS := {
 	"blaster": preload("res://scripts/weapons/blaster.gd"),
 	"homing": preload("res://scripts/weapons/homing.gd"),
@@ -21,39 +23,27 @@ const WEAPON_SCRIPTS := {
 const UI_ACCENT := Color(0.35, 0.95, 1.0)
 const UI_PANEL := Color(0.04, 0.06, 0.11, 0.94)
 const GAME_OVER_DELAY := 0.7
-const SAVE_PATH := "user://save.cfg"
-const MAX_RECORDS := 10
-
-const LOOK_AHEAD := Vector2(80.0, 80.0)
-const LOOK_SMOOTH_MOVING := 0.7
-const LOOK_SMOOTH_STOPPING := 0.4
-const ENEMY_LEASH := 1000.0
 const SEPARATION_CELL := 40.0
 const SEPARATION_SPACING := 0.95
 const SEPARATION_STRENGTH := 0.5
-const SHAKE_MAX := 9.0
-const SHAKE_DECAY := 2.2
 
 enum Phase { TITLE, PLAYING, PAUSED, LEVEL_UP, GAME_OVER }
 
 # Survives reload_current_scene so "retry" can skip the title screen.
 static var skip_title := false
-static var persist_scores := true
 
 var phase := Phase.TITLE
 var world: Node2D
 var player
-var camera: Camera2D
+var camera: CameraRig
 var fx: Node2D
-var look_offset := Vector2.ZERO
-var look_velocity := Vector2.ZERO
+var scores := ScoreStore.new()
+var spawner := Spawner.new(self)
 var elapsed := 0.0
 var kills := 0
 var level := 1
 var xp := 0
 var xp_to_next := Balance.xp_to_next(1)
-var trickle_cd := 0.6
-var ring_cd := 0.4
 var _merge_cd := 0.0
 var pending_levels := 0
 # Owned items in pick order: weapon id -> weapon node, passive id -> stage (1..6).
@@ -61,14 +51,10 @@ var weapons := {}
 var passives := {}
 # Entries are "weapon:<id>" or "passive:<id>".
 var level_choices: Array[String] = []
-var trauma := 0.0
 var enemy_grid := {}
 var score := 0
 var kill_score := 0
 var overflow_score := 0
-var best_score := 0
-# Top runs, best first: {score, date, cleared, time}.
-var records: Array = []
 var ranking_root: Control
 var ranking_rows: Control
 var cleared := false
@@ -108,7 +94,7 @@ func _ready() -> void:
 	# Runs after the player's physics step so the camera never lags a tick behind.
 	process_physics_priority = 10
 	add_to_group("game")
-	_load_best()
+	scores.load_saved()
 	ui_font = _make_font()
 	_build_environment()
 	_build_world()
@@ -125,12 +111,12 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	_update_shake(delta)
+	camera.update_shake(delta)
 	if phase != Phase.PLAYING:
 		return
-	_update_camera(delta)
+	camera.follow(player, player.velocity, float(player.move_speed), delta)
 	_separate_enemies()
-	_leash_enemies()
+	spawner.leash_enemies()
 	_merge_cd -= delta
 	if _merge_cd <= 0.0:
 		_merge_cd = Balance.GEM_MERGE_INTERVAL
@@ -154,16 +140,6 @@ func _merge_gems() -> void:
 		else:
 			gem.remove_from_group("gems")
 			keeper.absorb(gem)
-
-
-func add_trauma(amount: float) -> void:
-	trauma = minf(1.0, trauma + amount)
-
-
-func _update_shake(delta: float) -> void:
-	trauma = maxf(0.0, trauma - SHAKE_DECAY * delta)
-	var strength := trauma * trauma * SHAKE_MAX
-	camera.offset = Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * strength
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -240,59 +216,10 @@ func _process(delta: float) -> void:
 			_finish(true)
 			_update_hud()
 			return
-		var spurt := Balance.LAST_SPURT_SPAWN if _remaining() <= Balance.LAST_SPURT else 1.0
-		trickle_cd -= delta
-		if trickle_cd <= 0.0:
-			trickle_cd = Balance.trickle_interval(elapsed) * spurt
-			_spawn_pack()
-		ring_cd -= delta
-		if ring_cd <= 0.0:
-			ring_cd = Balance.ring_interval(elapsed) * spurt
-			_spawn_ring()
+		spawner.update(delta)
 		if pending_levels > 0:
 			_open_level_up()
 	_update_hud()
-
-
-func _update_camera(delta: float) -> void:
-	var move_ratio: Vector2 = player.velocity / maxf(1.0, float(player.move_speed))
-	# Standing still keeps the current lead: drifting back to centre on its own
-	# scrolls the world forward and reads as the ship backing up.
-	if move_ratio == Vector2.ZERO:
-		_smooth_damp_look(look_offset, LOOK_SMOOTH_STOPPING, delta)
-	else:
-		_smooth_damp_look(move_ratio * LOOK_AHEAD, LOOK_SMOOTH_MOVING, delta)
-	camera.global_position = player.global_position + look_offset
-
-
-# Critically damped spring, so the camera eases in and out without overshoot.
-func _smooth_damp_look(target: Vector2, smooth_time: float, delta: float) -> void:
-	var omega := 2.0 / smooth_time
-	var x := omega * delta
-	var decay := 1.0 / (1.0 + x + 0.48 * x * x + 0.235 * x * x * x)
-	var change := look_offset - target
-	var temp := (look_velocity + omega * change) * delta
-	look_velocity = (look_velocity - omega * temp) * decay
-	look_offset = target + (change + temp) * decay
-
-
-func _view_rect() -> Rect2:
-	var size := get_viewport_rect().size
-	return Rect2(camera.get_screen_center_position() - size * 0.5, size)
-
-
-func _edge_spawn_position() -> Vector2:
-	var view := _view_rect()
-	var margin := 40.0
-	match randi() % 4:
-		0:
-			return Vector2(randf_range(view.position.x, view.end.x), view.position.y - margin)
-		1:
-			return Vector2(view.end.x + margin, randf_range(view.position.y, view.end.y))
-		2:
-			return Vector2(randf_range(view.position.x, view.end.x), view.end.y + margin)
-		_:
-			return Vector2(view.position.x - margin, randf_range(view.position.y, view.end.y))
 
 
 # Enemies whose grid cell overlaps the circle; built once per physics tick by _separate_enemies.
@@ -367,62 +294,8 @@ func _separate_enemies() -> void:
 			(enemies[i] as Node2D).global_position += pushes[i]
 
 
-# Stragglers reappear on the edge the player is heading toward, so outrunning the horde doesn't thin it out.
-func _leash_enemies() -> void:
-	for node in get_tree().get_nodes_in_group("enemies"):
-		var enemy := node as Node2D
-		if enemy != null and enemy.global_position.distance_to(player.global_position) > ENEMY_LEASH:
-			enemy.global_position = _edge_position_toward(player.velocity)
-
-
-func _edge_position_toward(dir: Vector2) -> Vector2:
-	if dir.length_squared() < 1.0:
-		return _edge_spawn_position()
-	var view := _view_rect()
-	var center := view.get_center()
-	var ray := dir.normalized().rotated(randf_range(-0.9, 0.9))
-	var half := view.size * 0.5 + Vector2(40, 40)
-	var t := minf(half.x / maxf(absf(ray.x), 0.001), half.y / maxf(absf(ray.y), 0.001))
-	return center + ray * t
-
-
 func _enemy_count() -> int:
 	return get_tree().get_nodes_in_group("enemies").size()
-
-
-func _spawn_enemy(kind: String, at: Vector2) -> void:
-	if _enemy_count() >= Balance.ENEMY_CAP:
-		return
-	if kind == "shooter" and get_tree().get_nodes_in_group("shooters").size() >= Balance.SHOOTER_MAX:
-		kind = "penta"
-	var enemy := EnemyScript.new()
-	enemy.setup(kind, elapsed)
-	enemy.died.connect(_on_enemy_died)
-	world.add_child(enemy)
-	enemy.global_position = at
-
-
-# A small clump entering from one point on the screen edge.
-func _spawn_pack() -> void:
-	var origin := _edge_spawn_position()
-	var kind := Balance.pick_enemy_kind(elapsed)
-	var count := Balance.trickle_pack(elapsed)
-	if Balance.ENEMY_KINDS[kind].has("behavior"):
-		count = mini(count, 3)
-	for i in count:
-		_spawn_enemy(kind, origin + Vector2(randf_range(-28, 28), randf_range(-28, 28)))
-
-
-# A full ring just outside the screen so enemies close in from every direction.
-func _spawn_ring() -> void:
-	var count := Balance.ring_count(elapsed)
-	var center := camera.get_screen_center_position()
-	var radius := get_viewport_rect().size.length() * 0.5 + 50.0
-	var offset := randf() * TAU
-	for i in count:
-		var angle := offset + TAU * float(i) / float(count)
-		var jitter := Vector2(randf_range(-20, 20), randf_range(-20, 20))
-		_spawn_enemy(Balance.pick_enemy_kind(elapsed, false), center + Vector2.from_angle(angle) * radius + jitter)
 
 
 func _remaining() -> float:
@@ -433,7 +306,7 @@ func _on_enemy_died(at: Vector2, value: int, points: int) -> void:
 	kills += 1
 	kill_score += points
 	score += points
-	add_trauma(0.06)
+	camera.add_trauma(0.06)
 	var gem := GemScript.new()
 	gem.value = value
 	gem.collected.connect(_on_gem_collected)
@@ -442,7 +315,7 @@ func _on_enemy_died(at: Vector2, value: int, points: int) -> void:
 
 
 func _on_player_hurt(_amount: int) -> void:
-	add_trauma(0.45)
+	camera.add_trauma(0.45)
 
 
 func _on_gem_collected(value: int) -> void:
@@ -484,8 +357,8 @@ func _finish(survived: bool) -> void:
 		for shot in get_tree().get_nodes_in_group("enemy_shots"):
 			shot.queue_free()
 		fx.ring(player.global_position, Palette.hdr(Palette.PLAYER, 1.8), 600.0, 0.8)
-		add_trauma(0.5)
-	var rank := _record_score()
+		camera.add_trauma(0.5)
+	var rank := scores.record(score, cleared, elapsed)
 	go_title.text = "タイムアップ！" if survived else "ゲームオーバー"
 	go_title.add_theme_color_override("font_color", Palette.GEM if survived else Palette.HURT)
 	var lines: Array[String] = ["撃破 %d体  %d" % [kills, kill_score]]
@@ -500,55 +373,12 @@ func _finish(survived: bool) -> void:
 	if rank == 0:
 		go_best.text = "NEW RECORD!"
 	elif rank > 0:
-		go_best.text = "ランクイン  %d位      BEST  %d" % [rank + 1, best_score]
+		go_best.text = "ランクイン  %d位      BEST  %d" % [rank + 1, scores.best]
 	else:
-		go_best.text = "BEST  %d" % best_score
+		go_best.text = "BEST  %d" % scores.best
 	go_best.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35) if rank >= 0 else Color(0.75, 0.88, 0.95))
 	await get_tree().create_timer(GAME_OVER_DELAY).timeout
 	game_over_layer.visible = true
-
-
-func _load_best() -> void:
-	# Automated runs pass "nosave" so they never touch the player's record.
-	if OS.get_cmdline_user_args().has("nosave"):
-		persist_scores = false
-	if not persist_scores:
-		return
-	var cfg := ConfigFile.new()
-	if cfg.load(SAVE_PATH) != OK:
-		return
-	records = cfg.get_value("score", "records", [])
-	var legacy := int(cfg.get_value("score", "best", 0))
-	if records.is_empty() and legacy > 0:
-		records = [{"score": legacy, "date": "", "cleared": false, "time": 0.0}]
-	if not records.is_empty():
-		best_score = int(records[0]["score"])
-
-
-func _save_scores() -> void:
-	if not persist_scores:
-		return
-	var cfg := ConfigFile.new()
-	cfg.set_value("score", "best", best_score)
-	cfg.set_value("score", "records", records)
-	cfg.save(SAVE_PATH)
-
-
-# Inserts this run into the ranking and returns its 0-based rank, or -1 if it missed the list.
-func _record_score() -> int:
-	var rank := records.size()
-	for i in records.size():
-		if score > int(records[i]["score"]):
-			rank = i
-			break
-	if rank >= MAX_RECORDS:
-		return -1
-	var date := Time.get_datetime_string_from_system(false, true).substr(0, 16)
-	records.insert(rank, {"score": score, "date": date, "cleared": cleared, "time": elapsed})
-	records.resize(mini(records.size(), MAX_RECORDS))
-	best_score = int(records[0]["score"])
-	_save_scores()
-	return rank
 
 
 func _open_level_up() -> void:
@@ -675,9 +505,7 @@ func _build_world() -> void:
 	fx.process_mode = Node.PROCESS_MODE_ALWAYS
 	world.add_child(fx)
 	_add_weapon(Balance.STARTING_WEAPON)
-	camera = Camera2D.new()
-	camera.name = "Camera"
-	camera.process_callback = Camera2D.CAMERA2D_PROCESS_PHYSICS
+	camera = CameraRig.new()
 	add_child(camera)
 	camera.global_position = player.global_position
 	camera.make_current()
@@ -903,8 +731,8 @@ func _build_title_ui() -> void:
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	var view := get_viewport_rect().size
 	# The logo itself is drawn by title_deco, in the world layer where glow applies.
-	if best_score > 0:
-		var hi := _label(root, "HI-SCORE  %d" % best_score, Vector2(0, 352), Vector2(view.x, 30), 20)
+	if scores.best > 0:
+		var hi := _label(root, "HI-SCORE  %d" % scores.best, Vector2(0, 352), Vector2(view.x, 30), 20)
 		hi.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		hi.add_theme_color_override("font_color", Color(1.0, 0.85, 0.35))
 	btn_start = _choice_button(root, "スタート", Vector2(410, 400))
@@ -926,7 +754,7 @@ func _build_ranking_ui() -> void:
 	title_layer.add_child(ranking_root)
 	ranking_root.add_child(_overlay())
 	ranking_root.add_child(_panel(Vector2(290, 50), Vector2(700, 620)))
-	var heading := _label(ranking_root, "HIGH SCORE  TOP %d" % MAX_RECORDS, Vector2(290, 72), Vector2(700, 48), 32)
+	var heading := _label(ranking_root, "HIGH SCORE  TOP %d" % ScoreStore.MAX_RECORDS, Vector2(290, 72), Vector2(700, 48), 32)
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	heading.add_theme_color_override("font_color", UI_ACCENT)
 	var header_color := Color(0.6, 0.75, 0.85)
@@ -949,6 +777,7 @@ func _show_ranking(open: bool) -> void:
 		return
 	for child in ranking_rows.get_children():
 		child.queue_free()
+	var records := scores.records
 	if records.is_empty():
 		var empty := _label(ranking_rows, "まだ記録がありません", Vector2(290, 300), Vector2(700, 32), 22)
 		empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
