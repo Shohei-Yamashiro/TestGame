@@ -15,6 +15,13 @@ const COLORS := {
 	"attack": Color(0.9, 0.5, 1.0),
 	"rate": Color(0.5, 0.85, 1.0),
 	"move": Color(0.45, 1.0, 0.65),
+	"magnet": Color(0.8, 0.65, 1.0),
+	"max_hp": Color(0.55, 0.6, 1.0),
+	"regen": Color(0.3, 1.0, 0.85),
+	"area": Color(0.25, 0.65, 1.0),
+	"armor": Color(0.75, 0.85, 1.0),
+	"growth": Color(0.35, 0.95, 1.0),
+	"knock": Color(0.45, 0.45, 1.0),
 }
 var item_id := ""
 var is_weapon := true
@@ -169,3 +176,58 @@ func _draw_symbol(c: Vector2, r: float, color: Color) -> void:
 			for i in 2:
 				var x := -r * 0.55 + float(i) * r * 0.65
 				draw_polyline(PackedVector2Array([c + Vector2(x, -r * 0.7), c + Vector2(x + r * 0.55, 0), c + Vector2(x, r * 0.7)]), color, 3.0, true)
+		"magnet":
+			# A horseshoe magnet with a small gem being drawn in.
+			draw_arc(c + Vector2(0, -r * 0.1), r * 0.6, 0.0, PI, 16, color, r * 0.32, true)
+			for side in [-1.0, 1.0]:
+				var x: float = side * r * 0.6
+				draw_line(c + Vector2(x, -r * 0.1), c + Vector2(x, -r * 0.75), color, r * 0.32, true)
+			var g := c + Vector2(0, -r * 0.55)
+			var gs := r * 0.2
+			draw_colored_polygon(PackedVector2Array([g + Vector2(0, -gs), g + Vector2(gs, 0), g + Vector2(0, gs), g + Vector2(-gs, 0)]), color)
+		"max_hp":
+			draw_colored_polygon(_cross(c, r * 0.95, r * 0.34), color)
+		"regen":
+			draw_colored_polygon(_cross(c, r * 0.5, r * 0.18), color)
+			for side in [0.0, PI]:
+				draw_arc(c, r * 0.9, side - 0.4, side + 1.3, 12, color, 2.0, true)
+				var tip := c + Vector2.from_angle(side + 1.3) * r * 0.9
+				var d := Vector2.from_angle(side + 1.3 + PI * 0.5) * r * 0.3
+				draw_colored_polygon(PackedVector2Array([tip + d, tip + d.orthogonal() * 0.7, tip - d.orthogonal() * 0.7]), color)
+		"area":
+			for i in 3:
+				var size := r * (0.35 + 0.33 * float(i))
+				var diamond := PackedVector2Array([c + Vector2(0, -size), c + Vector2(size, 0), c + Vector2(0, size), c + Vector2(-size, 0)])
+				if i == 0:
+					draw_colored_polygon(diamond, color)
+				else:
+					draw_polyline(Palette.closed(diamond), Color(color.r, color.g, color.b, 1.0 - 0.3 * float(i)), 1.5, true)
+		"armor":
+			var shield := Palette.regular_polygon(6, r * 1.0, PI / 6.0)
+			for i in shield.size():
+				shield[i] += c
+			draw_polyline(Palette.closed(shield), color, 2.0, true)
+			var core := Palette.regular_polygon(6, r * 0.55, PI / 6.0)
+			for i in core.size():
+				core[i] += c
+			draw_colored_polygon(core, color)
+		"growth":
+			for i in 2:
+				var y := r * 0.55 - float(i) * r * 0.65
+				draw_polyline(PackedVector2Array([c + Vector2(-r * 0.7, y), c + Vector2(0, y - r * 0.55), c + Vector2(r * 0.7, y)]), color, 3.0, true)
+			draw_line(c + Vector2(-r * 0.7, r * 0.95), c + Vector2(r * 0.7, r * 0.95), color, 2.0, true)
+		"knock":
+			var s := r * 0.32
+			draw_colored_polygon(PackedVector2Array([c + Vector2(-s, -s), c + Vector2(s, -s), c + Vector2(s, s), c + Vector2(-s, s)]), color)
+			for side in [-1.0, 1.0]:
+				var x: float = side * r * 0.62
+				draw_polyline(PackedVector2Array([c + Vector2(x, -r * 0.6), c + Vector2(x + side * r * 0.4, 0), c + Vector2(x, r * 0.6)]), color, 2.5, true)
+
+
+# A plus sign as a single 12-point outline.
+func _cross(c: Vector2, arm: float, half: float) -> PackedVector2Array:
+	return PackedVector2Array([
+		c + Vector2(-half, -arm), c + Vector2(half, -arm), c + Vector2(half, -half), c + Vector2(arm, -half),
+		c + Vector2(arm, half), c + Vector2(half, half), c + Vector2(half, arm), c + Vector2(-half, arm),
+		c + Vector2(-half, half), c + Vector2(-arm, half), c + Vector2(-arm, -half), c + Vector2(-half, -half),
+	])

@@ -42,6 +42,10 @@ func cooldown_of(base: Variant) -> float:
 	return float(base) * float(player.cooldown_mult)
 
 
+func area_of(base: Variant) -> float:
+	return float(base) * float(player.area_mult)
+
+
 func world() -> Node2D:
 	return player.world
 

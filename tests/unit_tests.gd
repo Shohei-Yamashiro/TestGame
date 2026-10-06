@@ -9,6 +9,7 @@ const GameScript := preload("res://scripts/game.gd")
 const GemScript := preload("res://scripts/gem.gd")
 const ScoreStore := preload("res://scripts/score_store.gd")
 const CameraRig := preload("res://scripts/camera_rig.gd")
+const ItemIconScript := preload("res://scripts/item_icon.gd")
 
 var _current := ""
 var _failures: Array[String] = []
@@ -75,6 +76,8 @@ func test_passive_table() -> void:
 		for pair in entry.get("stats", []):
 			var values: Array = entry.get(pair[0], [])
 			check(values.size() == Balance.MAX_STAGE + 1, "%s.%s needs %d values" % [id, pair[0], Balance.MAX_STAGE + 1])
+		check(str(entry.get("name", "")) != "", "%s has no name" % id)
+		check(ItemIconScript.COLORS.has(id), "%s has no icon color" % id)
 
 
 func test_enemy_table() -> void:
@@ -108,6 +111,7 @@ func test_art_rule_friendly() -> void:
 	var friendly := [Palette.PLAYER, Palette.BULLET, Palette.BULLET_PIERCE, Palette.GEM, Palette.HOMING,
 		Palette.ORBIT, Palette.NOVA, Palette.LASER, Palette.WINGS, Palette.ELECTRIC]
 	friendly.append_array(Palette.GEM_TIERS)
+	friendly.append_array(ItemIconScript.COLORS.values())
 	for color in friendly:
 		check(color.b > color.r, "friendly color %s is not cool" % color)
 
@@ -268,6 +272,116 @@ func test_spawner_respects_enemy_cap() -> void:
 	for i in Balance.ENEMY_CAP + 20:
 		game.spawner.spawn_enemy("tri", Vector2(600, float(i)))
 	check(game._enemy_count() == Balance.ENEMY_CAP, "enemy count should stop at the cap, got %d" % game._enemy_count())
+	game.free()
+
+
+# --- Passives (with a live game) ---
+
+func test_passives_reach_the_player() -> void:
+	var game = _new_game()
+	for id in Balance.PASSIVE_ORDER:
+		game.passives[id] = Balance.MAX_STAGE
+	game._apply_stats()
+	var p = game.player
+	check(is_equal_approx(p.magnet_radius, Balance.PASSIVES["magnet"]["magnet"][Balance.MAX_STAGE]), "magnet not applied")
+	check(is_equal_approx(p.move_speed, Balance.PASSIVES["move"]["speed"][Balance.MAX_STAGE]), "move speed not applied")
+	check(is_equal_approx(p.area_mult, Balance.PASSIVES["area"]["area"][Balance.MAX_STAGE]), "area_mult not applied")
+	check(is_equal_approx(p.knock_mult, Balance.PASSIVES["knock"]["knock"][Balance.MAX_STAGE]), "knock_mult not applied")
+	check(is_equal_approx(p.xp_mult, Balance.PASSIVES["growth"]["xp"][Balance.MAX_STAGE]), "xp_mult not applied")
+	check(is_equal_approx(p.armor, Balance.PASSIVES["armor"]["armor"][Balance.MAX_STAGE]), "armor not applied")
+	check(is_equal_approx(p.regen, Balance.PASSIVES["regen"]["regen"][Balance.MAX_STAGE]), "regen not applied")
+	check(p.max_hp == Balance.PASSIVES["max_hp"]["max_hp"][Balance.MAX_STAGE], "max_hp not applied")
+	game.free()
+
+
+func test_move_and_magnet_are_separate() -> void:
+	var game = _new_game()
+	game.passives["move"] = Balance.MAX_STAGE
+	game._apply_stats()
+	check(is_equal_approx(game.player.magnet_radius, Balance.BASE_MAGNET), "move speed alone must not widen the magnet")
+	game.passives.erase("move")
+	game.passives["magnet"] = Balance.MAX_STAGE
+	game._apply_stats()
+	check(is_equal_approx(game.player.move_speed, Balance.PASSIVES["move"]["speed"][0]), "magnet alone must not speed the player up")
+	game.free()
+
+
+func test_max_hp_heals_by_the_increase() -> void:
+	var game = _new_game()
+	game.player.hp = 60
+	game.passives["max_hp"] = 1
+	game._apply_stats()
+	var gain: int = Balance.PASSIVES["max_hp"]["max_hp"][1] - Balance.PLAYER_MAX_HP
+	check(game.player.hp == 60 + gain, "hp should rise by the max_hp gain, got %d" % game.player.hp)
+	game._apply_stats()
+	check(game.player.hp == 60 + gain, "re-applying the same stage must not heal again")
+	game.free()
+
+
+func test_armor_reduces_damage_but_not_below_one() -> void:
+	var game = _new_game()
+	var p = game.player
+	p.armor = 0.3
+	p.hp = 100
+	p.take_hit(10)
+	check(p.hp == 93, "armor 0.3 should turn 10 damage into 7, hp=%d" % p.hp)
+	p._hurt_cd = 0.0
+	p.take_hit(1)
+	check(p.hp == 92, "a hit always deals at least 1, hp=%d" % p.hp)
+	game.free()
+
+
+func test_regen_banks_fractions() -> void:
+	var game = _new_game()
+	var p = game.player
+	p.regen = 0.5
+	p.hp = 50
+	for i in 60:
+		p._regenerate(1.0 / 60.0)
+	check(p.hp == 50, "0.5 HP/s should not heal a whole point in 1 s, hp=%d" % p.hp)
+	for i in 66:
+		p._regenerate(1.0 / 60.0)
+	check(p.hp == 51, "0.5 HP/s should heal 1 point in about 2 s, hp=%d" % p.hp)
+	p.hp = p.max_hp
+	p._regenerate(10.0)
+	check(p.hp == p.max_hp, "regen must not exceed max hp")
+	game.free()
+
+
+func test_growth_banks_fractional_xp() -> void:
+	var game = _new_game()
+	game.xp_to_next = 1000
+	game.player.xp_mult = 1.5
+	game._on_gem_collected(1)
+	check(game.xp == 1, "1 xp at x1.5 gives 1 now, got %d" % game.xp)
+	game._on_gem_collected(1)
+	check(game.xp == 3, "the banked half should pay out on the next gem, got %d" % game.xp)
+	game.free()
+
+
+func test_knock_scales_enemy_push() -> void:
+	var game = _new_game()
+	game.spawner.spawn_enemy("tri", Vector2(300, 0))
+	var enemy = game.get_tree().get_nodes_in_group("enemies")[0]
+	enemy.hp = 1000
+	game.player.knock_mult = 2.0
+	var before: Vector2 = enemy.global_position
+	enemy.take_damage(1, Vector2.RIGHT, 10.0)
+	check(is_equal_approx(enemy.global_position.x - before.x, 20.0), "knock x2 should push 20, got %.2f" % (enemy.global_position.x - before.x))
+	game.free()
+
+
+func test_area_scales_weapon_reach() -> void:
+	var game = _new_game()
+	game._add_weapon("nova")
+	game._add_weapon("laser")
+	game.player.area_mult = 1.5
+	var nova = game.weapons["nova"]
+	nova._emit_wave()
+	var wave: Dictionary = nova._waves[nova._waves.size() - 1]
+	check(is_equal_approx(float(wave["radius"]), float(nova.stat("radius")) * 1.5), "nova radius should scale with area")
+	var laser = game.weapons["laser"]
+	check(is_equal_approx(laser.area_of(laser.stat("width")), float(laser.stat("width")) * 1.5), "laser width should scale with area")
 	game.free()
 
 

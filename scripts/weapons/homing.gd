@@ -44,6 +44,7 @@ func _launch(queued) -> void:
 	missile.target = target
 	missile.damage = damage_of(stat("damage"))
 	missile.explosive = is_special()
+	missile.blast_radius = area_of(Balance.MISSILE_BLAST_RADIUS)
 	missile.pierce = 2 if is_milestone() else 1
 	world().add_child(missile)
 	missile.global_position = player.global_position

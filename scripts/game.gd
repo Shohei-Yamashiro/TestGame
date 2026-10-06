@@ -55,6 +55,7 @@ var level := 1
 var xp := 0
 var xp_to_next := Balance.xp_to_next(1)
 var _merge_cd := 0.0
+var _xp_carry := 0.0
 var pending_levels := 0
 # Owned items in pick order: weapon id -> weapon node, passive id -> stage (1..6).
 var weapons := {}
@@ -301,7 +302,11 @@ func _on_player_hurt(_amount: int) -> void:
 func _on_gem_collected(value: int) -> void:
 	if phase == Phase.GAME_OVER:
 		return
-	xp += value
+	# Fractions from the growth passive are banked so small gems still add up.
+	_xp_carry += float(value) * player.xp_mult
+	var gained := int(_xp_carry)
+	_xp_carry -= float(gained)
+	xp += gained
 	while xp >= xp_to_next:
 		xp -= xp_to_next
 		level += 1
@@ -445,7 +450,16 @@ func _apply_stats() -> void:
 	player.damage_mult = float(_passive_value("attack", "damage"))
 	player.cooldown_mult = float(_passive_value("rate", "cooldown"))
 	player.move_speed = float(_passive_value("move", "speed"))
-	player.magnet_radius = float(_passive_value("move", "magnet"))
+	player.magnet_radius = float(_passive_value("magnet", "magnet"))
+	player.area_mult = float(_passive_value("area", "area"))
+	player.knock_mult = float(_passive_value("knock", "knock"))
+	player.xp_mult = float(_passive_value("growth", "xp"))
+	player.armor = float(_passive_value("armor", "armor"))
+	player.regen = float(_passive_value("regen", "regen"))
+	var new_max := int(_passive_value("max_hp", "max_hp"))
+	if new_max > player.max_hp:
+		player.hp += new_max - player.max_hp
+	player.max_hp = new_max
 
 
 func _restart() -> void:

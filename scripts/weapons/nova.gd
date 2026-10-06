@@ -58,7 +58,7 @@ func _physics_process(delta: float) -> void:
 func _emit_wave() -> void:
 	_waves.append({
 		"center": player.global_position,
-		"radius": float(stat("radius")),
+		"radius": area_of(stat("radius")),
 		"damage": damage_of(stat("damage")),
 		"age": 0.0,
 		"hit": {},
@@ -73,7 +73,7 @@ func _update_shield(delta: float) -> void:
 		_tick_cd = cooldown_of(Balance.AURA_TICK)
 		var center := player.global_position
 		var damage := maxi(1, int(round(float(damage_of(stat("damage"))) * Balance.AURA_DAMAGE_RATIO)))
-		for enemy in enemies_in_circle(center, Balance.RING_RADIUS):
+		for enemy in enemies_in_circle(center, area_of(Balance.RING_RADIUS)):
 			var away: Vector2 = (enemy.global_position - center).normalized()
 			enemy.apply_slow(Balance.NOVA_SLOW_FACTOR, Balance.NOVA_SLOW_TIME)
 			enemy.take_damage(damage, away, Balance.AURA_KNOCKBACK)
@@ -84,7 +84,7 @@ func _update_shield(delta: float) -> void:
 	_mote_cd -= delta
 	if _mote_cd <= 0.0 and fx:
 		_mote_cd = 0.06
-		var at := player.global_position + Vector2.from_angle(randf() * TAU) * Balance.RING_RADIUS
+		var at := player.global_position + Vector2.from_angle(randf() * TAU) * area_of(Balance.RING_RADIUS)
 		fx.burst(at, Palette.hdr(Palette.ELECTRIC, 1.6), 1, 90.0)
 
 
@@ -109,7 +109,7 @@ func _draw() -> void:
 # Short jagged arcs hugging the rim, re-rolled every few frames so the edge crackles.
 func _roll_bolts() -> void:
 	_bolts.clear()
-	var r := Balance.RING_RADIUS
+	var r := area_of(Balance.RING_RADIUS)
 	for i in BOLT_COUNT:
 		var start := randf() * TAU
 		var span := randf_range(0.2, 0.55)
@@ -124,7 +124,7 @@ func _roll_bolts() -> void:
 
 func _draw_shield() -> void:
 	var center := player.global_position
-	var r := Balance.RING_RADIUS
+	var r := area_of(Balance.RING_RADIUS)
 	var fill := Palette.ELECTRIC
 	fill.a = 0.035
 	draw_circle(center, r, fill)
