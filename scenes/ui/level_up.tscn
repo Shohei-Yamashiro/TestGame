@@ -52,7 +52,7 @@ offset_right = 990.0
 offset_bottom = 224.0
 theme_override_colors/font_color = Color(0.75, 0.88, 0.95, 1)
 theme_override_font_sizes/font_size = 19
-text = "1つ選んでください（武器・パッシブ各3枠 / 武器はLv5の次にスペシャル）"
+text = "1つ選んでください（武器・パッシブ各4枠 / 武器はLv5の次にスペシャル）"
 horizontal_alignment = 1
 
 [node name="Choice0" type="Button" parent="Root"]
