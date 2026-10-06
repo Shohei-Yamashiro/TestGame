@@ -430,6 +430,67 @@ func test_mine_detonates_and_caps() -> void:
 	game.free()
 
 
+func test_drain_costs_hp_and_heals() -> void:
+	var game = _new_game()
+	game._add_weapon("drain")
+	var drain = game.weapons["drain"]
+	var p = game.player
+	p.hp = 60
+	var enemy = _sturdy_enemy(game, p.global_position + Vector2(120, 0))
+	var start_hp: int = enemy.hp
+	game._separate_enemies()
+	drain._cd = 0.0
+	drain._physics_process(1.0 / 60.0)
+	check(drain.links.size() == 1, "drain should link to the nearest enemy")
+	check(p.hp == 60 - Balance.DRAIN_COST, "linking should cost %d hp, hp %d" % [Balance.DRAIN_COST, p.hp])
+	check(enemy.hp < start_hp, "the link should hurt right away")
+	for i in int(Balance.DRAIN_TIME * 60.0):
+		game._separate_enemies()
+		drain._physics_process(1.0 / 60.0)
+	check(drain.links.is_empty(), "the link should end after its time")
+	var dealt: int = start_hp - enemy.hp
+	var expected := int(float(dealt) * float(drain.stat("drain")))
+	check(absi(p.hp - (60 - Balance.DRAIN_COST + expected)) <= 1, "drain should heal about %d of %d dealt, hp %d" % [expected, dealt, p.hp])
+	check(expected > 0, "the test should drain enough to heal")
+	game.free()
+
+
+func test_drain_holds_fire_at_low_hp() -> void:
+	var game = _new_game()
+	game._add_weapon("drain")
+	var drain = game.weapons["drain"]
+	game.player.hp = Balance.DRAIN_MIN_HP
+	_sturdy_enemy(game, game.player.global_position + Vector2(100, 0))
+	game._separate_enemies()
+	drain._cd = 0.0
+	drain._physics_process(1.0 / 60.0)
+	check(drain.links.is_empty(), "drain must not fire at or below the hp floor")
+	check(game.player.hp == Balance.DRAIN_MIN_HP, "no hp should be spent")
+	game.free()
+
+
+func test_drain_special_jumps_on_kill() -> void:
+	var game = _new_game()
+	game._add_weapon("drain")
+	var drain = game.weapons["drain"]
+	drain.level = Balance.SPECIAL_STAGE
+	var p = game.player
+	p.hp = 60
+	var origin: Vector2 = p.global_position
+	# The second enemy is out of linking range from the player but within jump range of the first.
+	game.spawner.spawn_enemy("tri", origin + Vector2(200, 0))
+	var weak = game.get_tree().get_nodes_in_group("enemies")[0]
+	weak.hp = 1
+	var next = _sturdy_enemy(game, origin + Vector2(330, 0))
+	game._separate_enemies()
+	drain._cd = 0.0
+	drain._physics_process(1.0 / 60.0)
+	check(not weak.alive, "the weak enemy should die on the first tick")
+	check(drain.links.size() == 1 and drain.links[0]["target"] == next, "the link should jump to the nearby enemy")
+	check(p.hp > 60 - Balance.DRAIN_COST, "a kill should heal, hp %d" % p.hp)
+	game.free()
+
+
 # --- Passives (with a live game) ---
 
 func test_passives_reach_the_player() -> void:

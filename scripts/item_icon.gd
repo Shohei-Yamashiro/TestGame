@@ -15,6 +15,7 @@ const COLORS := {
 	"chain": Palette.CHAIN,
 	"tesseract": Palette.TESSERACT,
 	"mine": Palette.MINE,
+	"drain": Palette.DRAIN,
 	"attack": Color(0.9, 0.5, 1.0),
 	"rate": Color(0.5, 0.85, 1.0),
 	"move": Color(0.45, 1.0, 0.65),
@@ -191,6 +192,17 @@ func _draw_symbol(c: Vector2, r: float, color: Color) -> void:
 				star.append(c + Vector2.from_angle(PI * float(k) / 4.0) * (r * 0.95 if k % 2 == 0 else r * 0.45))
 			draw_polyline(Palette.closed(star), color, 2.0, true)
 			draw_circle(c, r * 0.22, color)
+		"drain":
+			var a := c + Vector2(-r * 0.62, r * 0.62)
+			var b := c + Vector2(r * 0.62, -r * 0.62)
+			draw_line(a, b, Color(color.r, color.g, color.b, 0.6), 1.5, true)
+			var big := r * 0.3
+			var small := r * 0.16
+			draw_colored_polygon(PackedVector2Array([a + Vector2(0, -big), a + Vector2(big, 0), a + Vector2(0, big), a + Vector2(-big, 0)]), color)
+			draw_polyline(Palette.closed(PackedVector2Array([b + Vector2(0, -big), b + Vector2(big, 0), b + Vector2(0, big), b + Vector2(-big, 0)])), color, 2.0, true)
+			for t in [0.35, 0.65]:
+				var p := a.lerp(b, t)
+				draw_colored_polygon(PackedVector2Array([p + Vector2(0, -small), p + Vector2(small, 0), p + Vector2(0, small), p + Vector2(-small, 0)]), color)
 		"attack":
 			var pts := PackedVector2Array()
 			for i in 8:
