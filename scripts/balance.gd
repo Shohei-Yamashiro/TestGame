@@ -87,7 +87,7 @@ const MILESTONE_STAGE := 3
 
 # --- Weapons: each stat array is indexed by level - 1 (Lv1..Lv5); the special keeps Lv5 stats ---
 const STARTING_WEAPON := "blaster"
-const WEAPON_ORDER := ["blaster", "homing", "orbit", "nova", "laser", "wings", "chain", "tesseract", "mine"]
+const WEAPON_ORDER := ["blaster", "homing", "orbit", "nova", "laser", "wings", "chain", "tesseract", "mine", "drain"]
 const WEAPONS := {
 	"blaster": {
 		"name": "ブラスター",
@@ -196,6 +196,18 @@ const WEAPONS := {
 		"special": "減速フィールド",
 		"special_desc": "爆発の跡に、敵を減速させて削る場がしばらく残る",
 	},
+	"drain": {
+		"name": "ドレインリンク",
+		"desc": "HPを消費して最寄りの敵と光の線でつなぎ、削り続ける。与えたダメージの一部と撃破でHPを回復する",
+		"damage": [4, 5, 7, 9, 12],
+		"drain": [0.2, 0.25, 0.3, 0.35, 0.4],
+		"interval": [1.8, 1.7, 1.6, 1.5, 1.4],
+		"stats": [["damage", "ダメージが増加", "ダメージ"], ["drain", "吸収率が上昇", "吸収率"], ["interval", "攻撃間隔が短縮", "攻撃間隔"]],
+		"milestone": "二重リンク",
+		"milestone_desc": "最寄りの2体と同時につなぐ",
+		"special": "連鎖吸収",
+		"special_desc": "つないだ敵を倒すと、近くの敵へ線が自動で移る",
+	},
 }
 const CHAIN_RANGE := 380.0
 const CHAIN_JUMP := 160.0
@@ -223,6 +235,14 @@ const MINE_ECHO_RATIO := 0.6
 const MINE_FIELD_TIME := 3.0
 const MINE_FIELD_TICK := 0.4
 const MINE_FIELD_RATIO := 0.2
+const DRAIN_COST := 3
+const DRAIN_MIN_HP := 20
+const DRAIN_RANGE := 260.0
+const DRAIN_BREAK := 340.0
+const DRAIN_TIME := 1.5
+const DRAIN_TICK := 0.2
+const DRAIN_KILL_HEAL := 3.0
+const DRAIN_JUMP := 180.0
 const MISSILE_SPEED := 380.0
 const MISSILE_TURN := 7.5
 const MISSILE_TURN_START := 1.6

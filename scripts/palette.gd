@@ -16,6 +16,7 @@ const ELECTRIC := Color(0.55, 0.85, 1.0)
 const CHAIN := Color(0.8, 0.85, 1.0)
 const TESSERACT := Color(0.25, 0.78, 0.95)
 const MINE := Color(0.9, 0.55, 1.0)
+const DRAIN := Color(0.62, 0.45, 1.0)
 const GEM_TIERS: Array[Color] = [
 	Color(0.45, 1.0, 0.8),
 	Color(0.4, 0.85, 1.0),

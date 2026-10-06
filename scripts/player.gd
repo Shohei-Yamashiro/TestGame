@@ -30,6 +30,7 @@ var velocity := Vector2.ZERO
 
 var _hurt_cd := 0.0
 var _regen_carry := 0.0
+var _heal_carry := 0.0
 var _flash := 0.0
 var _time := 0.0
 
@@ -61,6 +62,27 @@ func _regenerate(delta: float) -> void:
 		var amount := int(_regen_carry)
 		_regen_carry -= float(amount)
 		hp = mini(max_hp, hp + amount)
+
+
+# Paying for an attack is not a hit: armor and invulnerability do not apply, and it never kills.
+func spend_hp(amount: int) -> bool:
+	if not alive or hp <= amount:
+		return false
+	hp -= amount
+	return true
+
+
+func heal(amount: float) -> void:
+	if not alive or amount <= 0.0:
+		return
+	if hp >= max_hp:
+		_heal_carry = 0.0
+		return
+	_heal_carry += amount
+	if _heal_carry >= 1.0:
+		var whole := int(_heal_carry)
+		_heal_carry -= float(whole)
+		hp = mini(max_hp, hp + whole)
 
 
 func _move(delta: float) -> void:
