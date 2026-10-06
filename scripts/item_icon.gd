@@ -12,6 +12,9 @@ const COLORS := {
 	"nova": Palette.NOVA,
 	"laser": Palette.LASER,
 	"wings": Palette.WINGS,
+	"chain": Palette.CHAIN,
+	"tesseract": Palette.TESSERACT,
+	"mine": Palette.MINE,
 	"attack": Color(0.9, 0.5, 1.0),
 	"rate": Color(0.5, 0.85, 1.0),
 	"move": Color(0.45, 1.0, 0.65),
@@ -161,6 +164,33 @@ func _draw_symbol(c: Vector2, r: float, color: Color) -> void:
 					var tip := base - dir * r * (1.75 - 0.25 * float(i))
 					var normal := dir.orthogonal() * (r * 0.24)
 					draw_colored_polygon(PackedVector2Array([base + normal * 0.3, (base + tip) * 0.5 + normal, tip, base - normal * 0.3]), Color(color.r, color.g, color.b, 1.0 - 0.22 * float(i)))
+		"chain":
+			# A zigzag bolt joining two nodes.
+			var bolt := PackedVector2Array([
+				c + Vector2(-r * 0.85, -r * 0.75), c + Vector2(-r * 0.05, -r * 0.2), c + Vector2(-r * 0.35, r * 0.15),
+				c + Vector2(r * 0.85, r * 0.75),
+			])
+			draw_polyline(bolt, Color(color.r, color.g, color.b, 0.35), 6.0, true)
+			draw_polyline(bolt, color, 2.0, true)
+			for p in [bolt[0], bolt[3]]:
+				var d := r * 0.24
+				draw_colored_polygon(PackedVector2Array([p + Vector2(0, -d), p + Vector2(d, 0), p + Vector2(0, d), p + Vector2(-d, 0)]), color)
+		"tesseract":
+			var outer := r * 0.85
+			var inner := r * 0.4
+			var corners := [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]
+			for k in 4:
+				var p: Vector2 = corners[k]
+				var q: Vector2 = corners[(k + 1) % 4]
+				draw_line(c + p * outer, c + q * outer, color, 2.0, true)
+				draw_line(c + p * inner, c + q * inner, color, 2.0, true)
+				draw_line(c + p * outer, c + p * inner, Color(color.r, color.g, color.b, 0.6), 1.5, true)
+		"mine":
+			var star := PackedVector2Array()
+			for k in 8:
+				star.append(c + Vector2.from_angle(PI * float(k) / 4.0) * (r * 0.95 if k % 2 == 0 else r * 0.45))
+			draw_polyline(Palette.closed(star), color, 2.0, true)
+			draw_circle(c, r * 0.22, color)
 		"attack":
 			var pts := PackedVector2Array()
 			for i in 8:

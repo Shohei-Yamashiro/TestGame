@@ -316,6 +316,120 @@ func test_spawner_respects_enemy_cap() -> void:
 	game.free()
 
 
+# --- New weapons (with a live game) ---
+
+func _sturdy_enemy(game, at: Vector2):
+	game.spawner.spawn_enemy("tri", at)
+	var enemies: Array = game.get_tree().get_nodes_in_group("enemies")
+	var enemy = enemies[enemies.size() - 1]
+	enemy.hp = 100000
+	return enemy
+
+
+func test_chain_hits_up_to_its_target_count() -> void:
+	var game = _new_game()
+	var first = null
+	for i in 5:
+		var enemy = _sturdy_enemy(game, Vector2(200 + i * 100, 0))
+		if i == 0:
+			first = enemy
+	game._separate_enemies()
+	game._add_weapon("chain")
+	var chain = game.weapons["chain"]
+	check(chain.strike(first) == 3, "Lv1 chain should hit 3 enemies")
+	chain.level = Balance.MILESTONE_STAGE
+	check(chain.max_targets() == int(chain.stat("jumps")) + Balance.CHAIN_MILESTONE_JUMPS, "milestone adds jumps")
+	check(chain.strike(first) == 5, "milestone chain should reach all 5 enemies in range")
+	game.free()
+
+
+func test_chain_stops_at_jump_range() -> void:
+	var game = _new_game()
+	var first = _sturdy_enemy(game, Vector2(200, 0))
+	_sturdy_enemy(game, Vector2(200 + Balance.CHAIN_JUMP * 2.0, 0))
+	game._separate_enemies()
+	game._add_weapon("chain")
+	check(game.weapons["chain"].strike(first) == 1, "an enemy beyond the jump range must not be reached")
+	game.free()
+
+
+func test_tesseract_blocks_enemies_and_shots() -> void:
+	var game = _new_game()
+	game._add_weapon("tesseract")
+	var tesseract = game.weapons["tesseract"]
+	tesseract._cd = 999.0
+	game.player.facing = Vector2.RIGHT
+	var origin: Vector2 = game.player.global_position
+	var enemy = _sturdy_enemy(game, origin + Vector2(Balance.TESSERACT_RANGE * 0.5, 0))
+	var start_hp: int = enemy.hp
+	tesseract.launch()
+	for i in int(Balance.TESSERACT_SLIDE_TIME * 60.0) + 1:
+		game._separate_enemies()
+		tesseract._physics_process(1.0 / 60.0)
+	var at: Vector2 = tesseract.cubes[0]["pos"]
+	check(not tesseract.is_sliding(tesseract.cubes[0]), "the cube should be at rest after its slide")
+	check(at.distance_to(origin + Vector2(Balance.TESSERACT_RANGE, 0)) < 1.0, "the cube should rest at its full range")
+	check(enemy.hp < start_hp, "a sliding cube should hurt the enemy it pushes")
+	check(enemy.global_position.x > origin.x + Balance.TESSERACT_RANGE * 0.5 + 20.0, "the enemy should be shoved forward")
+	var resting = _sturdy_enemy(game, at + Vector2(0, 5))
+	var shot = load("res://scripts/enemy_shot.gd").new()
+	game.world.add_child(shot)
+	shot.global_position = at + Vector2(4, 0)
+	var resting_hp: int = resting.hp
+	game._separate_enemies()
+	tesseract._physics_process(1.0 / 60.0)
+	var gap: float = resting.global_position.distance_to(at)
+	check(gap >= tesseract.radius() + resting.radius - 0.01, "a resting cube should still push enemies out, gap %.1f" % gap)
+	check(resting.hp == resting_hp, "a resting cube should not hurt without the special")
+	check(shot.is_queued_for_deletion(), "an enemy shot inside the cube should be cancelled")
+	tesseract.cubes[0]["age"] = 999.0
+	tesseract._physics_process(1.0 / 60.0)
+	check(tesseract.cubes.is_empty(), "the cube should vanish after its life")
+	game.free()
+
+
+func test_tesseract_special_hurts_at_rest() -> void:
+	var game = _new_game()
+	game._add_weapon("tesseract")
+	var tesseract = game.weapons["tesseract"]
+	tesseract._cd = 999.0
+	tesseract.level = Balance.SPECIAL_STAGE
+	game.player.facing = Vector2.RIGHT
+	tesseract.launch()
+	check(tesseract.cubes.size() == 2, "the milestone should launch two cubes")
+	var dirs: Array = [tesseract.cubes[0]["dir"], tesseract.cubes[1]["dir"]]
+	check(absf((dirs[0] as Vector2).angle_to(dirs[1])) < PI / 2.0, "the two cubes should fan out at an acute angle")
+	for cube in tesseract.cubes:
+		cube["age"] = Balance.TESSERACT_SLIDE_TIME + 0.1
+	tesseract._physics_process(1.0 / 60.0)
+	var at: Vector2 = tesseract.cubes[0]["pos"]
+	var enemy = _sturdy_enemy(game, at + Vector2(0, -5).rotated((tesseract.cubes[0]["dir"] as Vector2).angle()))
+	var start_hp: int = enemy.hp
+	game._separate_enemies()
+	tesseract._physics_process(1.0 / 60.0)
+	check(enemy.hp < start_hp, "with the special a resting cube should hurt enemies it touches")
+	game.free()
+
+
+func test_mine_detonates_and_caps() -> void:
+	var game = _new_game()
+	game._add_weapon("mine")
+	var mine = game.weapons["mine"]
+	mine._cd = 999.0
+	for i in Balance.MINE_MAX + 3:
+		mine.place(Vector2(400 + i * 50, 300))
+	check(mine.mines.size() == Balance.MINE_MAX, "mines should cap at %d" % Balance.MINE_MAX)
+	mine.mines.clear()
+	mine.place(Vector2(300, 0))
+	var enemy = _sturdy_enemy(game, Vector2(300, 0))
+	var start_hp: int = enemy.hp
+	game._separate_enemies()
+	mine._physics_process(Balance.MINE_ARM_TIME + 0.01)
+	check(mine.mines.is_empty(), "an armed mine touched by an enemy should detonate")
+	check(enemy.hp < start_hp, "the blast should damage the enemy")
+	game.free()
+
+
 # --- Passives (with a live game) ---
 
 func test_passives_reach_the_player() -> void:

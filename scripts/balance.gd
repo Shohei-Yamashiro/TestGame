@@ -87,7 +87,7 @@ const MILESTONE_STAGE := 3
 
 # --- Weapons: each stat array is indexed by level - 1 (Lv1..Lv5); the special keeps Lv5 stats ---
 const STARTING_WEAPON := "blaster"
-const WEAPON_ORDER := ["blaster", "homing", "orbit", "nova", "laser", "wings"]
+const WEAPON_ORDER := ["blaster", "homing", "orbit", "nova", "laser", "wings", "chain", "tesseract", "mine"]
 const WEAPONS := {
 	"blaster": {
 		"name": "ブラスター",
@@ -160,7 +160,69 @@ const WEAPONS := {
 		"special": "十字レーザー",
 		"special_desc": "4方向に同時に照射する",
 	},
+	"chain": {
+		"name": "連鎖電撃",
+		"desc": "近くの敵に雷を落とし、そこから近い敵へ次々と連鎖させる",
+		"damage": [12, 15, 19, 24, 30],
+		"jumps": [3, 3, 4, 4, 5],
+		"interval": [1.6, 1.5, 1.4, 1.3, 1.2],
+		"stats": [["damage", "ダメージが増加", "ダメージ"], ["jumps", "連鎖する数が増加", "連鎖数"], ["interval", "攻撃間隔が短縮", "攻撃間隔"]],
+		"milestone": "連鎖強化",
+		"milestone_desc": "連鎖する数が2増える",
+		"special": "放電",
+		"special_desc": "連鎖した敵の周りにも放電し、近くの敵を巻き込む",
+	},
+	"tesseract": {
+		"name": "テセラクト",
+		"desc": "進行方向へ4次元立方体を放つ。止まるまでは敵を押し出して削り、止まった後は敵と敵弾を通さない壁になる",
+		"damage": [10, 13, 16, 20, 25],
+		"life": [3.0, 3.5, 4.0, 4.5, 5.0],
+		"interval": [2.4, 2.2, 2.0, 1.8, 1.6],
+		"stats": [["damage", "ダメージが増加", "ダメージ"], ["life", "持続時間が伸びる", "持続時間"], ["interval", "発射間隔が短縮", "発射間隔"]],
+		"milestone": "二重展開",
+		"milestone_desc": "鋭角のV字状に2個同時に放つ",
+		"special": "共鳴",
+		"special_desc": "止まった後も、触れた敵にダメージを与え続ける",
+	},
+	"mine": {
+		"name": "設置機雷",
+		"desc": "移動した跡に機雷を置く。敵が触れると爆発し、周囲を巻き込む",
+		"damage": [18, 23, 29, 36, 44],
+		"radius": [70.0, 75.0, 80.0, 88.0, 96.0],
+		"interval": [1.2, 1.1, 1.0, 0.9, 0.8],
+		"stats": [["damage", "ダメージが増加", "ダメージ"], ["radius", "爆発範囲が拡大", "爆発半径"], ["interval", "設置間隔が短縮", "設置間隔"]],
+		"milestone": "2段爆発",
+		"milestone_desc": "爆発の少し後に、同じ場所でもう一度爆発する",
+		"special": "減速フィールド",
+		"special_desc": "爆発の跡に、敵を減速させて削る場がしばらく残る",
+	},
 }
+const CHAIN_RANGE := 380.0
+const CHAIN_JUMP := 160.0
+const CHAIN_FALLOFF := 0.9
+const CHAIN_MILESTONE_JUMPS := 2
+const CHAIN_DISCHARGE_RADIUS := 60.0
+const CHAIN_DISCHARGE_RATIO := 0.5
+const CHAIN_SHOW := 0.25
+const TESSERACT_MAX := 6
+const TESSERACT_RADIUS := 26.0
+const TESSERACT_RANGE := 200.0
+const TESSERACT_SLIDE_TIME := 0.6
+const TESSERACT_TRIGGER := 320.0
+const TESSERACT_SPREAD := 0.25
+const TESSERACT_HIT_TICK := 0.25
+const TESSERACT_REST_TICK := 0.4
+const TESSERACT_REST_RATIO := 0.5
+const MINE_MAX := 8
+const MINE_LIFETIME := 8.0
+const MINE_ARM_TIME := 0.3
+const MINE_TRIGGER := 10.0
+const MINE_SPACING := 36.0
+const MINE_ECHO_DELAY := 0.4
+const MINE_ECHO_RATIO := 0.6
+const MINE_FIELD_TIME := 3.0
+const MINE_FIELD_TICK := 0.4
+const MINE_FIELD_RATIO := 0.2
 const MISSILE_SPEED := 380.0
 const MISSILE_TURN := 7.5
 const MISSILE_TURN_START := 1.6
