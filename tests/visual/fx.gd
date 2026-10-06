@@ -9,7 +9,7 @@ var taken := 0
 
 func _initialize() -> void:
 	seed(5)
-	load("res://scripts/game.gd").persist_scores = false
+	load("res://scripts/score_store.gd").persist = false
 	game = (load("res://scenes/main.tscn") as PackedScene).instantiate()
 	root.add_child(game)
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(shots))

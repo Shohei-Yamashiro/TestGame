@@ -8,7 +8,7 @@ var shots := "user://ui_shots"
 
 func _initialize() -> void:
 	seed(11)
-	load("res://scripts/game.gd").persist_scores = false
+	load("res://scripts/score_store.gd").persist = false
 	game = (load("res://scenes/main.tscn") as PackedScene).instantiate()
 	root.add_child(game)
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(shots))
@@ -33,7 +33,7 @@ func _process(_delta: float) -> bool:
 		var center: Vector2 = game.player.global_position
 		var kinds := ["dasher", "dasher", "shooter", "shooter", "shooter", "hepta"]
 		for i in kinds.size():
-			game._spawn_enemy(kinds[i], center + Vector2.from_angle(TAU * float(i) / kinds.size()) * 300.0)
+			game.spawner.spawn_enemy(kinds[i], center + Vector2.from_angle(TAU * float(i) / kinds.size()) * 300.0)
 		# Gems of each tier in a row, plus a loose cluster to watch merging.
 		var values := [1, 3, 8, 20]
 		for i in values.size():
@@ -49,8 +49,8 @@ func _process(_delta: float) -> bool:
 		return false
 	game.player.hp = game.player.max_hp
 	game.pending_levels = 0
-	game.trickle_cd = 999.0
-	game.ring_cd = 999.0
+	game.spawner.trickle_cd = 999.0
+	game.spawner.ring_cd = 999.0
 	game.player.magnet_radius = 0.0
 	if game.phase == game.Phase.PAUSED:
 		game._resume()

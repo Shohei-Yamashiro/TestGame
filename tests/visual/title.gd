@@ -7,7 +7,7 @@ var shots := "user://ui_shots"
 
 
 func _initialize() -> void:
-	load("res://scripts/game.gd").persist_scores = false
+	load("res://scripts/score_store.gd").persist = false
 	game = (load("res://scenes/main.tscn") as PackedScene).instantiate()
 	root.add_child(game)
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(shots))
@@ -24,10 +24,8 @@ func _process(_delta: float) -> bool:
 	if frame == 100:
 		_shot("4_title.png")
 		for i in 7:
-			game.score = 52000 - i * 6100
-			game.cleared = i % 3 != 2
-			game.elapsed = 180.0 if game.cleared else 95.0 + i * 7.0
-			game._record_score()
+			var cleared := i % 3 != 2
+			game.scores.record(52000 - i * 6100, cleared, 180.0 if cleared else 95.0 + i * 7.0)
 		game._show_ranking(true)
 	if frame == 110:
 		_shot("5_ranking.png")

@@ -25,7 +25,7 @@ func _initialize() -> void:
 		seed(int(args[1]))
 	if args.size() > 2:
 		max_seconds = float(args[2])
-	load("res://scripts/game.gd").persist_scores = false
+	load("res://scripts/score_store.gd").persist = false
 	game = (load("res://scenes/main.tscn") as PackedScene).instantiate()
 	root.add_child(game)
 
