@@ -63,15 +63,19 @@ func _blade_scale() -> float:
 
 func _blade_offsets() -> Array[Vector2]:
 	var count := int(stat("count")) + (1 if is_special() else 0)
-	var radius := Balance.ORBIT_SPECIAL_RADIUS if is_special() else Balance.ORBIT_RADIUS
+	var radius := _orbit_radius()
 	var result: Array[Vector2] = []
 	for i in count:
 		result.append(Vector2.from_angle(_angle + TAU * float(i) / float(count)) * radius)
 	return result
 
 
+func _orbit_radius() -> float:
+	return area_of(Balance.ORBIT_SPECIAL_RADIUS if is_special() else Balance.ORBIT_RADIUS)
+
+
 func _draw() -> void:
-	var radius := Balance.ORBIT_SPECIAL_RADIUS if is_special() else Balance.ORBIT_RADIUS
+	var radius := _orbit_radius()
 	var faint := Palette.hdr(Palette.ORBIT, 0.8)
 	faint.a = 0.12
 	draw_arc(Vector2.ZERO, radius, 0.0, TAU, 48, faint, 1.0, true)

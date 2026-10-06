@@ -28,7 +28,7 @@ func _process(_delta: float) -> bool:
 			game._add_weapon(id)
 		for id in game.weapons:
 			game.weapons[id].level = 6
-		for id in ["attack", "rate", "move"]:
+		for id in game.Balance.PASSIVE_ORDER:
 			game.passives[id] = 5
 		game._apply_stats()
 		return false

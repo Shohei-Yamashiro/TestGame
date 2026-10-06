@@ -114,7 +114,7 @@ func _sweep_amount() -> float:
 
 
 func _reach() -> float:
-	return Balance.WINGS_SPECIAL_REACH if is_special() else float(stat("reach"))
+	return area_of(Balance.WINGS_SPECIAL_REACH if is_special() else stat("reach"))
 
 
 func _feather_count() -> int:

@@ -32,7 +32,7 @@ func _physics_process(delta: float) -> void:
 func _fire(aim: Vector2) -> void:
 	var count := 4 if is_special() else (2 if is_milestone() else 1)
 	var origin := player.global_position
-	var width := float(stat("width"))
+	var width := area_of(stat("width"))
 	var damage := damage_of(stat("damage"))
 	var enemies := get_tree().get_nodes_in_group("enemies")
 	for i in count:

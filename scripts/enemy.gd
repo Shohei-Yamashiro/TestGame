@@ -156,7 +156,8 @@ func take_damage(amount: int, from_dir: Vector2, knockback: float = Balance.KNOC
 		died.emit(global_position, xp_value, points)
 		queue_free()
 	elif _state == State.CHASE:
-		global_position += from_dir * knockback * knock_scale
+		var boost: float = float(_player.get("knock_mult")) if _player != null else 1.0
+		global_position += from_dir * knockback * knock_scale * boost
 
 
 func _outline(r: float, turn: float) -> PackedVector2Array:

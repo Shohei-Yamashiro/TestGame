@@ -15,6 +15,11 @@ var hp := Balance.PLAYER_MAX_HP
 var move_speed: float = Balance.PASSIVES["move"]["speed"][0]
 var damage_mult: float = Balance.PASSIVES["attack"]["damage"][0]
 var cooldown_mult: float = Balance.PASSIVES["rate"]["cooldown"][0]
+var area_mult: float = Balance.PASSIVES["area"]["area"][0]
+var knock_mult: float = Balance.PASSIVES["knock"]["knock"][0]
+var xp_mult: float = Balance.PASSIVES["growth"]["xp"][0]
+var armor: float = Balance.PASSIVES["armor"]["armor"][0]
+var regen: float = Balance.PASSIVES["regen"]["regen"][0]
 var hurt_interval := Balance.HURT_INTERVAL
 var hurt_radius := 14.0
 var magnet_radius := Balance.BASE_MAGNET
@@ -24,6 +29,7 @@ var facing := Vector2.RIGHT
 var velocity := Vector2.ZERO
 
 var _hurt_cd := 0.0
+var _regen_carry := 0.0
 var _flash := 0.0
 var _time := 0.0
 
@@ -41,7 +47,20 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector2.ZERO
 		return
 	_move(delta)
+	_regenerate(delta)
 	_contact_damage(delta)
+
+
+# hp is whole numbers, so fractional healing is banked until it adds up to a point.
+func _regenerate(delta: float) -> void:
+	if regen <= 0.0 or hp >= max_hp:
+		_regen_carry = 0.0
+		return
+	_regen_carry += regen * delta
+	if _regen_carry >= 1.0:
+		var amount := int(_regen_carry)
+		_regen_carry -= float(amount)
+		hp = mini(max_hp, hp + amount)
 
 
 func _move(delta: float) -> void:
@@ -96,6 +115,7 @@ func take_hit(damage: int) -> bool:
 	if not alive or _hurt_cd > 0.0:
 		return false
 	_hurt_cd = hurt_interval
+	damage = maxi(1, int(round(float(damage) * (1.0 - armor))))
 	hp = maxi(0, hp - damage)
 	hurt.emit(damage)
 	_flash = 0.12

@@ -24,7 +24,7 @@ const SPECIAL_STAGE := 6
 const HEAL_AMOUNT := 35
 
 # --- Passives: arrays are indexed by stage, so index 0 is the value before the passive is taken ---
-const PASSIVE_ORDER := ["attack", "rate", "move"]
+const PASSIVE_ORDER := ["attack", "rate", "move", "magnet", "max_hp", "regen", "area", "armor", "growth", "knock"]
 const PASSIVES := {
 	"attack": {
 		"name": "攻撃力",
@@ -39,8 +39,44 @@ const PASSIVES := {
 	"move": {
 		"name": "移動速度",
 		"speed": [230.0, 245.0, 260.0, 275.0, 290.0, 310.0],
+		"stats": [["speed", "移動速度が増加"]],
+	},
+	"magnet": {
+		"name": "回収範囲",
 		"magnet": [BASE_MAGNET, 215.0, 255.0, 300.0, 350.0, 420.0],
-		"stats": [["speed", "移動速度が増加"], ["magnet", "回収範囲が拡大"]],
+		"stats": [["magnet", "経験値を引き寄せる範囲が拡大"]],
+	},
+	"max_hp": {
+		"name": "最大HP",
+		"max_hp": [PLAYER_MAX_HP, 115, 130, 150, 170, 200],
+		"stats": [["max_hp", "最大HPが増加（増えた分だけ回復）"]],
+	},
+	"regen": {
+		"name": "再生",
+		# HP per second.
+		"regen": [0.0, 0.4, 0.7, 1.0, 1.4, 1.8],
+		"stats": [["regen", "HPが少しずつ回復"]],
+	},
+	"area": {
+		"name": "効果範囲",
+		"area": [1.0, 1.1, 1.2, 1.3, 1.4, 1.55],
+		"stats": [["area", "ノヴァ・周回・翼・爆発の範囲とレーザーの太さが拡大"]],
+	},
+	"armor": {
+		"name": "装甲",
+		# Fraction of incoming damage removed.
+		"armor": [0.0, 0.06, 0.12, 0.18, 0.24, 0.3],
+		"stats": [["armor", "受けるダメージを軽減"]],
+	},
+	"growth": {
+		"name": "成長",
+		"xp": [1.0, 1.1, 1.2, 1.3, 1.45, 1.6],
+		"stats": [["xp", "獲得経験値が増加"]],
+	},
+	"knock": {
+		"name": "衝撃",
+		"knock": [1.0, 1.25, 1.5, 1.75, 2.0, 2.4],
+		"stats": [["knock", "ノックバックが強くなる"]],
 	},
 }
 const BLASTER_SPECIAL_PIERCE := 3

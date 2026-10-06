@@ -12,6 +12,7 @@ var direction := Vector2.RIGHT
 var damage := 12
 var pierce := 1
 var explosive := false
+var blast_radius := Balance.MISSILE_BLAST_RADIUS
 var target: EnemyScript
 
 var _age := 0.0
@@ -74,15 +75,15 @@ func _random_target() -> EnemyScript:
 
 func _explode() -> void:
 	var blast := int(round(float(damage) * Balance.MISSILE_BLAST_RATIO))
-	for node in _game.query_enemies(global_position, Balance.MISSILE_BLAST_RADIUS + 20.0):
+	for node in _game.query_enemies(global_position, blast_radius + 20.0):
 		if not is_instance_valid(node) or not node.alive or _hit.has(node):
 			continue
 		var d: Vector2 = node.global_position - global_position
-		var reach: float = Balance.MISSILE_BLAST_RADIUS + float(node.radius)
+		var reach: float = blast_radius + float(node.radius)
 		if d.length_squared() <= reach * reach:
 			node.take_damage(blast, d.normalized())
 	if _fx:
-		_fx.ring(global_position, Palette.hdr(Palette.HOMING, 1.4), Balance.MISSILE_BLAST_RADIUS, 0.25)
+		_fx.ring(global_position, Palette.hdr(Palette.HOMING, 1.4), blast_radius, 0.25)
 		_fx.burst(global_position, Palette.hdr(Palette.HOMING, 1.2), 10, 260.0)
 
 
