@@ -28,9 +28,11 @@ func _process(_delta: float) -> bool:
 		game._start_game()
 		game._add_weapon("wings")
 		game._add_weapon("homing")
+		game._add_weapon("drain")
 		game.weapons["blaster"].level = 6
 		game.weapons["wings"].level = 3
 		game.weapons["homing"].level = 4
+		game.weapons["drain"].level = 2
 		var ev := InputEventKey.new()
 		ev.physical_keycode = KEY_D
 		ev.keycode = KEY_D
@@ -38,6 +40,8 @@ func _process(_delta: float) -> bool:
 		Input.parse_input_event(ev)
 		game.passives["attack"] = 2
 		game.passives["move"] = 5
+		game.passives["armor"] = 1
+		game.passives["regen"] = 3
 		game._apply_stats()
 		game.elapsed = 160.0
 	if frame < 6:

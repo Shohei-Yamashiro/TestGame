@@ -17,8 +17,8 @@ const HP_BONUS_PER_POINT := 20
 const OVERFLOW_SCORE := 500
 
 # --- Slots and stages: owning an item starts it at Lv1; weapons go to Lv5 then a Lv6 special, passives stop at Lv5 ---
-const MAX_WEAPONS := 3
-const MAX_PASSIVES := 3
+const MAX_WEAPONS := 4
+const MAX_PASSIVES := 4
 const MAX_STAGE := 5
 const SPECIAL_STAGE := 6
 const HEAL_AMOUNT := 35
@@ -30,7 +30,7 @@ const PASSIVE_ORDER := ["attack", "rate", "move", "magnet", "max_hp", "regen", "
 const PASSIVES := {
 	"attack": {
 		"name": "攻撃力",
-		"damage": [1.0, 1.2, 1.4, 1.65, 1.9, 2.2],
+		"damage": [1.0, 1.18, 1.36, 1.55, 1.75, 2.0],
 		"stats": [["damage", "全武器のダメージが増加", "ダメージ倍率"]],
 	},
 	"rate": {
@@ -61,23 +61,23 @@ const PASSIVES := {
 	},
 	"area": {
 		"name": "効果範囲",
-		"area": [1.0, 1.1, 1.2, 1.3, 1.4, 1.55],
-		"stats": [["area", "ノヴァ・周回・翼・爆発の範囲とレーザーの太さが拡大", "範囲倍率"]],
+		"area": [1.0, 1.15, 1.3, 1.45, 1.6, 1.8],
+		"stats": [["area", "爆発・波・刃などの範囲とレーザーの太さが拡大", "範囲倍率"]],
 	},
 	"armor": {
 		"name": "装甲",
 		# Fraction of incoming damage removed.
-		"armor": [0.0, 0.06, 0.12, 0.18, 0.24, 0.3],
+		"armor": [0.0, 0.1, 0.18, 0.26, 0.33, 0.4],
 		"stats": [["armor", "受けるダメージを軽減", "軽減率"]],
 	},
 	"growth": {
 		"name": "成長",
-		"xp": [1.0, 1.1, 1.2, 1.3, 1.45, 1.6],
+		"xp": [1.0, 1.12, 1.25, 1.4, 1.55, 1.7],
 		"stats": [["xp", "獲得経験値が増加", "経験値倍率"]],
 	},
 	"knock": {
 		"name": "衝撃",
-		"knock": [1.0, 1.25, 1.5, 1.75, 2.0, 2.4],
+		"knock": [1.0, 1.4, 1.8, 2.2, 2.6, 3.0],
 		"stats": [["knock", "ノックバックが強くなる", "ノックバック倍率"]],
 	},
 }

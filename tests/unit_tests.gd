@@ -430,6 +430,30 @@ func test_mine_detonates_and_caps() -> void:
 	game.free()
 
 
+func test_choices_respect_slot_limits() -> void:
+	var game = _new_game()
+	# The run starts with the blaster, so one weapon slot is already taken.
+	for id: String in Balance.WEAPON_ORDER.slice(1, Balance.MAX_WEAPONS - 1):
+		game._add_weapon(id)
+	for id: String in Balance.PASSIVE_ORDER.slice(0, Balance.MAX_PASSIVES - 1):
+		game.passives[id] = 1
+	var offered := {}
+	for i in 200:
+		for choice: String in game._roll_choices():
+			offered[choice] = true
+	check(offered.has("weapon:" + Balance.WEAPON_ORDER[Balance.MAX_WEAPONS - 1]), "a free weapon slot should offer new weapons")
+	check(offered.has("passive:" + Balance.PASSIVE_ORDER[Balance.MAX_PASSIVES - 1]), "a free passive slot should offer new passives")
+	game._add_weapon(Balance.WEAPON_ORDER[Balance.MAX_WEAPONS - 1])
+	game.passives[Balance.PASSIVE_ORDER[Balance.MAX_PASSIVES - 1]] = 1
+	check(game.weapons.size() == Balance.MAX_WEAPONS and game.passives.size() == Balance.MAX_PASSIVES, "slots should now be full")
+	for i in 200:
+		for choice: String in game._roll_choices():
+			var parts := choice.split(":")
+			var owned: bool = game.weapons.has(parts[1]) if parts[0] == "weapon" else game.passives.has(parts[1])
+			check(owned, "full slots must only offer owned items, got %s" % choice)
+	game.free()
+
+
 func test_drain_costs_hp_and_heals() -> void:
 	var game = _new_game()
 	game._add_weapon("drain")
