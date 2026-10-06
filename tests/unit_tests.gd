@@ -80,6 +80,47 @@ func test_passive_table() -> void:
 		check(ItemIconScript.COLORS.has(id), "%s has no icon color" % id)
 
 
+func test_stats_have_library_labels() -> void:
+	var tables := []
+	for id in Balance.WEAPON_ORDER:
+		tables.append([id, Balance.WEAPONS[id]])
+	for id in Balance.PASSIVE_ORDER:
+		tables.append([id, Balance.PASSIVES[id]])
+	for pair in tables:
+		for entry in pair[1]["stats"]:
+			check(entry.size() == 3 and str(entry[2]) != "", "%s.%s needs a short library label" % [pair[0], entry[0]])
+
+
+func test_library_lists_every_item() -> void:
+	var library = (load("res://scenes/ui/library.tscn") as PackedScene).instantiate()
+	root.add_child(library)
+	library.open()
+	check(library.visible, "library should open")
+	check(library._tiles.size() == Balance.WEAPON_ORDER.size() + Balance.PASSIVE_ORDER.size(), "one tile per weapon and passive")
+	for id in Balance.WEAPON_ORDER:
+		library.show_item(id, true)
+		var rows: int = 1 + Balance.WEAPONS[id]["stats"].size()
+		check(library._table.get_child_count() == rows * (Balance.MAX_STAGE + 1), "%s table has the wrong cell count" % id)
+		check(library._special.visible, "%s should show its special" % id)
+	for id in Balance.PASSIVE_ORDER:
+		library.show_item(id, false)
+		check(not library._special.visible, "%s is a passive and has no special" % id)
+		var pressed = library._group.get_pressed_button()
+		check(pressed != null and pressed.get_meta("item") == id, "the %s tile should be highlighted" % id)
+	library.close()
+	check(not library.visible, "library should close")
+	library.free()
+
+
+func test_library_value_format() -> void:
+	var Library := load("res://scripts/ui/library.gd")
+	check(Library.format_value("interval", true, 0.3) == "0.30秒", "interval format")
+	check(Library.format_value("armor", false, 0.06) == "-6%", "armor format")
+	check(Library.format_value("damage", true, 25.0) == "25", "weapon damage format")
+	check(Library.format_value("damage", false, 1.2) == "×1.20", "passive damage format")
+	check(Library.format_value("radius", true, 110.0) == "110", "plain number format")
+
+
 func test_enemy_table() -> void:
 	for kind in Balance.ENEMY_KINDS:
 		var entry: Dictionary = Balance.ENEMY_KINDS[kind]

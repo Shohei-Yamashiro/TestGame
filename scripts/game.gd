@@ -22,6 +22,8 @@ const LevelUpScene := preload("res://scenes/ui/level_up.tscn")
 const GameOverScene := preload("res://scenes/ui/game_over.tscn")
 const PauseScene := preload("res://scenes/ui/pause_menu.tscn")
 const TitleScene := preload("res://scenes/ui/title_menu.tscn")
+const LibraryScene := preload("res://scenes/ui/library.tscn")
+const Library := preload("res://scripts/ui/library.gd")
 const WEAPON_SCRIPTS := {
 	"blaster": preload("res://scripts/weapons/blaster.gd"),
 	"homing": preload("res://scripts/weapons/homing.gd"),
@@ -73,6 +75,7 @@ var upgrade_layer: LevelUp
 var game_over_layer: GameOver
 var pause_layer: PauseMenu
 var title_layer: TitleMenu
+var library_layer: Library
 var title_deco: Node2D
 
 
@@ -126,6 +129,10 @@ func _merge_gems() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	var key := event as InputEventKey
 	if key == null or not key.pressed or key.echo:
+		return
+	if library_layer.visible:
+		if key.keycode in [KEY_ESCAPE, KEY_BACKSPACE, KEY_P]:
+			library_layer.close()
 		return
 	match phase:
 		Phase.TITLE:
@@ -554,14 +561,30 @@ func _build_ui() -> void:
 	add_child(game_over_layer)
 	pause_layer = PauseScene.instantiate()
 	pause_layer.resume_requested.connect(_resume)
+	pause_layer.library_requested.connect(_open_library)
 	pause_layer.title_requested.connect(_back_to_title)
 	add_child(pause_layer)
 	title_layer = TitleScene.instantiate()
 	title_layer.start_requested.connect(_start_game)
 	title_layer.quit_requested.connect(_quit)
 	title_layer.ranking_requested.connect(_show_ranking)
+	title_layer.library_requested.connect(_open_library)
 	add_child(title_layer)
 	title_layer.set_best(scores.best)
+	library_layer = LibraryScene.instantiate()
+	library_layer.closed.connect(_on_library_closed)
+	add_child(library_layer)
+
+
+func _open_library() -> void:
+	if phase != Phase.TITLE and phase != Phase.PAUSED:
+		return
+	title_deco.visible = false
+	library_layer.open()
+
+
+func _on_library_closed() -> void:
+	title_deco.visible = phase == Phase.TITLE
 
 
 func _show_ranking(open: bool) -> void:
