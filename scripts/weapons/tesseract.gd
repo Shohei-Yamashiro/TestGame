@@ -1,10 +1,5 @@
 extends "res://scripts/weapons/weapon.gd"
 
-enum Leg { OUT, BACK, ORBIT }
-
-const KNOCK := 10.0
-const RETURN_ACCEL := 1800.0
-const CATCH_DIST := 24.0
 const SPIN_XW := 2.6
 const SPIN_YZ := 1.7
 const SPIN_XY := 0.6
@@ -12,11 +7,15 @@ const EYE_4D := 3.0
 const EYE_3D := 4.0
 const TILT_X := 0.5
 const TILT_Y := 0.6
-const DRAW_SCALE := 1.8
+const DRAW_SCALE := 1.05
+const GROW_TIME := 0.15
+const FADE_TIME := 0.4
+const PULSE_SHOW := 0.3
 
 var _cd := 0.5
 var _time := 0.0
-# Each cube: {"pos", "start", "dir", "t", "leg", "speed", "angle", "phase", "hit"}; "hit" resets on every leg.
+# Each cube: {"pos", "age", "life", "phase", "pulse_cd", "since_pulse", "touched"}.
+# "touched" maps an enemy's instance id to the time it may take contact damage again.
 var cubes: Array[Dictionary] = []
 var _edges: Array[Vector2i] = []
 
@@ -25,7 +24,7 @@ func _ready() -> void:
 	super._ready()
 	top_level = true
 	global_position = Vector2.ZERO
-	z_index = 3
+	z_index = 2
 	# Hypercube corners are the 16 sign patterns of (x, y, z, w); edges join corners differing in one sign.
 	for i in 16:
 		for bit in 4:
@@ -37,76 +36,91 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	_time += delta
 	_cd -= delta
-	if _cd <= 0.0 and cubes.is_empty() and nearest_enemy(float(stat("range")) + 80.0) != null:
+	if _cd <= 0.0 and nearest_enemy(Balance.TESSERACT_TRIGGER) != null:
 		_cd = cooldown_of(stat("interval"))
-		throw()
+		place()
 	for i in range(cubes.size() - 1, -1, -1):
-		if not _advance(cubes[i], delta):
+		var cube := cubes[i]
+		cube["age"] = float(cube["age"]) + delta
+		if float(cube["age"]) >= float(cube["life"]):
 			cubes.remove_at(i)
+			continue
+		_hold(cube)
+		if is_special():
+			_pulse(cube, delta)
+	_block_shots()
 	queue_redraw()
 
 
-func throw() -> void:
-	var spreads := [-Balance.TESSERACT_SPREAD, Balance.TESSERACT_SPREAD] if is_milestone() else [0.0]
-	for spread: float in spreads:
+func radius() -> float:
+	return area_of(Balance.TESSERACT_RADIUS)
+
+
+func place() -> void:
+	var dir := player.facing
+	var center := player.global_position + dir * area_of(Balance.TESSERACT_AHEAD)
+	var side := dir.orthogonal() * area_of(Balance.TESSERACT_SIDE)
+	var spots := [center - side, center + side] if is_milestone() else [center]
+	for spot: Vector2 in spots:
 		cubes.append({
-			"pos": player.global_position,
-			"start": player.global_position,
-			"dir": player.facing.rotated(spread),
-			"t": 0.0,
-			"leg": Leg.OUT,
-			"speed": 0.0,
-			"angle": 0.0,
-			"phase": spread * 3.0,
-			"hit": {},
+			"pos": spot,
+			"age": 0.0,
+			"life": float(stat("life")),
+			"phase": randf() * TAU,
+			"pulse_cd": Balance.TESSERACT_PULSE_TICK,
+			"since_pulse": PULSE_SHOW,
+			"touched": {},
 		})
+	while cubes.size() > Balance.TESSERACT_MAX:
+		cubes.pop_front()
 
 
-# Moves one cube and hits what it touches; returns false once the cube is gone.
-func _advance(cube: Dictionary, delta: float) -> bool:
-	var before: Vector2 = cube["pos"]
-	match int(cube["leg"]):
-		Leg.OUT:
-			cube["t"] = float(cube["t"]) + delta
-			var x := clampf(float(cube["t"]) / Balance.TESSERACT_OUT_TIME, 0.0, 1.0)
-			cube["pos"] = (cube["start"] as Vector2) + (cube["dir"] as Vector2) * float(stat("range")) * (1.0 - (1.0 - x) * (1.0 - x))
-			if x >= 1.0:
-				cube["leg"] = Leg.BACK
-				cube["hit"] = {}
-		Leg.BACK:
-			cube["speed"] = minf(Balance.TESSERACT_RETURN_SPEED, float(cube["speed"]) + RETURN_ACCEL * delta)
-			var to_player := player.global_position - before
-			if to_player.length() <= CATCH_DIST + float(cube["speed"]) * delta:
-				if not is_special():
-					return false
-				cube["leg"] = Leg.ORBIT
-				cube["t"] = 0.0
-				cube["angle"] = (before - player.global_position).angle()
-				cube["hit"] = {}
-			else:
-				cube["pos"] = before + to_player.normalized() * float(cube["speed"]) * delta
-		Leg.ORBIT:
-			cube["t"] = float(cube["t"]) + delta
-			if float(cube["t"]) >= Balance.TESSERACT_ORBIT_TIME:
-				return false
-			cube["angle"] = float(cube["angle"]) + TAU / Balance.TESSERACT_ORBIT_TIME * delta
-			cube["pos"] = player.global_position + Vector2.from_angle(float(cube["angle"])) * area_of(Balance.TESSERACT_ORBIT_RADIUS)
-	_hit_around(cube, (cube["pos"] as Vector2) - before)
-	return true
-
-
-func _hit_around(cube: Dictionary, motion: Vector2) -> void:
+# Pushes touching enemies back out to the cube's edge and grazes them on a short per-enemy cooldown.
+func _hold(cube: Dictionary) -> void:
 	var at: Vector2 = cube["pos"]
-	var hit: Dictionary = cube["hit"]
-	var push := motion.normalized() if motion.length_squared() > 0.01 else Vector2.ZERO
-	for enemy in enemies_in_circle(at, area_of(Balance.TESSERACT_HIT_RADIUS)):
+	var r := radius()
+	var touched: Dictionary = cube["touched"]
+	for enemy in enemies_in_circle(at, r):
+		var offset: Vector2 = enemy.global_position - at
+		var out := offset.normalized() if offset.length_squared() > 0.01 else player.facing
+		enemy.global_position = at + out * (r + float(enemy.radius))
 		var key: int = enemy.get_instance_id()
-		if hit.has(key):
+		if float(touched.get(key, 0.0)) > _time:
 			continue
-		hit[key] = true
+		touched[key] = _time + Balance.TESSERACT_CONTACT_TICK
 		if fx:
-			fx.hit_sparks(enemy.global_position, push, Palette.hdr(Palette.TESSERACT, 1.3))
-		enemy.take_damage(damage_of(stat("damage")), push, KNOCK)
+			fx.hit_sparks(at + out * r, out, Palette.hdr(Palette.TESSERACT, 1.3))
+		enemy.take_damage(damage_of(stat("damage")), out, 0.0)
+	if touched.size() > 32:
+		for key in touched.keys():
+			if float(touched[key]) <= _time:
+				touched.erase(key)
+
+
+func _pulse(cube: Dictionary, delta: float) -> void:
+	cube["since_pulse"] = float(cube["since_pulse"]) + delta
+	cube["pulse_cd"] = float(cube["pulse_cd"]) - delta
+	if float(cube["pulse_cd"]) > 0.0:
+		return
+	cube["pulse_cd"] = Balance.TESSERACT_PULSE_TICK
+	cube["since_pulse"] = 0.0
+	var at: Vector2 = cube["pos"]
+	var damage := maxi(1, int(round(float(damage_of(stat("damage"))) * Balance.TESSERACT_PULSE_RATIO)))
+	for enemy in enemies_in_circle(at, area_of(Balance.TESSERACT_PULSE_RADIUS)):
+		var out: Vector2 = (enemy.global_position - at).normalized()
+		enemy.take_damage(damage, out)
+
+
+func _block_shots() -> void:
+	if cubes.is_empty():
+		return
+	var r := radius()
+	for shot in get_tree().get_nodes_in_group("enemy_shots"):
+		for cube in cubes:
+			var limit: float = r + shot.HIT_RADIUS
+			if shot.global_position.distance_squared_to(cube["pos"]) <= limit * limit:
+				shot.cancel()
+				break
 
 
 # Rotates the hypercube in the XW and YZ planes and projects it to 2D; returns [points, depth 0..1 per corner].
@@ -135,15 +149,27 @@ func _project(t: float) -> Array:
 
 
 func _draw() -> void:
-	var s := area_of(Balance.TESSERACT_HIT_RADIUS) * DRAW_SCALE
+	var r := radius()
+	var tint := Palette.TESSERACT
 	for cube in cubes:
 		var at: Vector2 = cube["pos"]
+		var age: float = cube["age"]
+		var fade := clampf((float(cube["life"]) - age) / FADE_TIME, 0.0, 1.0)
+		var grow := clampf(age / GROW_TIME, 0.0, 1.0)
+		var s := r * DRAW_SCALE * grow
+		draw_circle(at, r * grow, Color(tint.r, tint.g, tint.b, 0.1 * fade))
+		draw_arc(at, r * grow, 0.0, TAU, 32, Color(tint.r, tint.g, tint.b, 0.35 * fade), 1.0, true)
 		var projected := _project(_time + float(cube["phase"]))
 		var points: PackedVector2Array = projected[0]
 		var depths: PackedFloat32Array = projected[1]
-		draw_circle(at, s * 0.55, Color(Palette.TESSERACT.r, Palette.TESSERACT.g, Palette.TESSERACT.b, 0.08))
 		for edge in _edges:
 			var near := (depths[edge.x] + depths[edge.y]) * 0.5
-			var color := Palette.hdr(Palette.TESSERACT, lerpf(0.9, 2.0, near))
-			color.a = lerpf(0.45, 1.0, near)
+			var color := Palette.hdr(tint, lerpf(0.9, 2.0, near))
+			color.a = lerpf(0.45, 1.0, near) * fade
 			draw_line(at + points[edge.x] * s, at + points[edge.y] * s, color, lerpf(1.0, 2.2, near), true)
+		var since: float = cube["since_pulse"]
+		if is_special() and since < PULSE_SHOW:
+			var x := since / PULSE_SHOW
+			var ring := Palette.hdr(tint, 1.6)
+			ring.a = (1.0 - x) * fade
+			draw_arc(at, lerpf(r, area_of(Balance.TESSERACT_PULSE_RADIUS), x), 0.0, TAU, 48, ring, 2.5 * (1.0 - x) + 0.5, true)

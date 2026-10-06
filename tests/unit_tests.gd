@@ -353,21 +353,48 @@ func test_chain_stops_at_jump_range() -> void:
 	game.free()
 
 
-func test_tesseract_hits_going_out_and_coming_back() -> void:
+func test_tesseract_blocks_enemies_and_shots() -> void:
 	var game = _new_game()
-	var enemy = _sturdy_enemy(game, Vector2(150, 0))
 	game._add_weapon("tesseract")
 	var tesseract = game.weapons["tesseract"]
 	tesseract._cd = 999.0
 	game.player.facing = Vector2.RIGHT
-	tesseract.throw()
+	tesseract.place()
+	var at: Vector2 = tesseract.cubes[0]["pos"]
+	var enemy = _sturdy_enemy(game, at + Vector2(5, 0))
+	var shot = load("res://scripts/enemy_shot.gd").new()
+	game.world.add_child(shot)
+	shot.global_position = at + Vector2(0, 4)
 	var start_hp: int = enemy.hp
-	for i in 180:
-		game._separate_enemies()
+	game._separate_enemies()
+	tesseract._physics_process(1.0 / 60.0)
+	var gap: float = enemy.global_position.distance_to(at)
+	check(gap >= tesseract.radius() + enemy.radius - 0.01, "the enemy should be pushed out of the cube, gap %.1f" % gap)
+	check(start_hp - enemy.hp == tesseract.damage_of(tesseract.stat("damage")), "touching should deal contact damage once")
+	check(shot.is_queued_for_deletion(), "an enemy shot inside the cube should be cancelled")
+	tesseract._physics_process(1.0 / 60.0)
+	check(start_hp - enemy.hp == tesseract.damage_of(tesseract.stat("damage")), "contact damage should wait for its tick")
+	tesseract.cubes[0]["age"] = 999.0
+	tesseract._physics_process(1.0 / 60.0)
+	check(tesseract.cubes.is_empty(), "the cube should vanish after its life")
+	game.free()
+
+
+func test_tesseract_special_pulses() -> void:
+	var game = _new_game()
+	game._add_weapon("tesseract")
+	var tesseract = game.weapons["tesseract"]
+	tesseract._cd = 999.0
+	tesseract.level = Balance.SPECIAL_STAGE
+	game.player.facing = Vector2.RIGHT
+	tesseract.place()
+	var at: Vector2 = tesseract.cubes[0]["pos"]
+	var enemy = _sturdy_enemy(game, at + Vector2(Balance.TESSERACT_PULSE_RADIUS * 0.8, 0))
+	var start_hp: int = enemy.hp
+	game._separate_enemies()
+	for i in int(Balance.TESSERACT_PULSE_TICK * 60.0) + 2:
 		tesseract._physics_process(1.0 / 60.0)
-	var dealt: int = start_hp - enemy.hp
-	check(dealt == tesseract.damage_of(tesseract.stat("damage")) * 2, "tesseract should hit twice, dealt %d" % dealt)
-	check(tesseract.cubes.is_empty(), "the cube should be caught and removed")
+	check(enemy.hp < start_hp, "the special pulse should hurt enemies near the cube")
 	game.free()
 
 

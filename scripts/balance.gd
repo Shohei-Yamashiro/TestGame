@@ -174,15 +174,15 @@ const WEAPONS := {
 	},
 	"tesseract": {
 		"name": "テセラクト",
-		"desc": "回転する4次元立方体を向いている方向へ放つ。戻ってきて、行きと帰りで敵を打つ",
-		"damage": [14, 18, 22, 27, 33],
-		"range": [260.0, 280.0, 300.0, 320.0, 340.0],
-		"interval": [1.8, 1.7, 1.6, 1.5, 1.4],
-		"stats": [["damage", "ダメージが増加", "ダメージ"], ["range", "飛距離が伸びる", "飛距離"], ["interval", "攻撃間隔が短縮", "攻撃間隔"]],
+		"desc": "向いている方向の先に4次元立方体を置く。敵と敵弾を通さず、触れた敵を削る",
+		"damage": [4, 5, 6, 8, 10],
+		"life": [3.0, 3.5, 4.0, 4.5, 5.0],
+		"interval": [2.4, 2.2, 2.0, 1.8, 1.6],
+		"stats": [["damage", "ダメージが増加", "接触ダメージ"], ["life", "持続時間が伸びる", "持続時間"], ["interval", "設置間隔が短縮", "設置間隔"]],
 		"milestone": "二重展開",
-		"milestone_desc": "左右に開いて2個同時に放つ",
-		"special": "旋回",
-		"special_desc": "戻ってきた立方体が自機の周りを1周し、近づく敵を打ってから消える",
+		"milestone_desc": "左右に並べて2個同時に置き、壁を広げる",
+		"special": "共鳴波",
+		"special_desc": "立方体が一定間隔で衝撃波を放ち、周囲の敵にダメージを与える",
 	},
 	"mine": {
 		"name": "設置機雷",
@@ -204,12 +204,15 @@ const CHAIN_MILESTONE_JUMPS := 2
 const CHAIN_DISCHARGE_RADIUS := 60.0
 const CHAIN_DISCHARGE_RATIO := 0.5
 const CHAIN_SHOW := 0.25
-const TESSERACT_OUT_TIME := 0.45
-const TESSERACT_RETURN_SPEED := 620.0
-const TESSERACT_HIT_RADIUS := 18.0
-const TESSERACT_SPREAD := 0.35
-const TESSERACT_ORBIT_RADIUS := 70.0
-const TESSERACT_ORBIT_TIME := 0.6
+const TESSERACT_MAX := 6
+const TESSERACT_RADIUS := 26.0
+const TESSERACT_AHEAD := 80.0
+const TESSERACT_TRIGGER := 320.0
+const TESSERACT_SIDE := 30.0
+const TESSERACT_CONTACT_TICK := 0.4
+const TESSERACT_PULSE_TICK := 0.8
+const TESSERACT_PULSE_RADIUS := 80.0
+const TESSERACT_PULSE_RATIO := 1.5
 const MINE_MAX := 8
 const MINE_LIFETIME := 8.0
 const MINE_ARM_TIME := 0.3

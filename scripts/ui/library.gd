@@ -124,6 +124,8 @@ static func format_value(key: String, is_weapon: bool, value: float) -> String:
 	match key:
 		"interval":
 			return "%.2f秒" % value
+		"life":
+			return "%.1f秒" % value
 		"armor":
 			return "-%d%%" % roundi(value * 100.0)
 		"regen":
