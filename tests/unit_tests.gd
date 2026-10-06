@@ -316,6 +316,80 @@ func test_spawner_respects_enemy_cap() -> void:
 	game.free()
 
 
+# --- New weapons (with a live game) ---
+
+func _sturdy_enemy(game, at: Vector2):
+	game.spawner.spawn_enemy("tri", at)
+	var enemies: Array = game.get_tree().get_nodes_in_group("enemies")
+	var enemy = enemies[enemies.size() - 1]
+	enemy.hp = 100000
+	return enemy
+
+
+func test_chain_hits_up_to_its_target_count() -> void:
+	var game = _new_game()
+	var first = null
+	for i in 5:
+		var enemy = _sturdy_enemy(game, Vector2(200 + i * 100, 0))
+		if i == 0:
+			first = enemy
+	game._separate_enemies()
+	game._add_weapon("chain")
+	var chain = game.weapons["chain"]
+	check(chain.strike(first) == 3, "Lv1 chain should hit 3 enemies")
+	chain.level = Balance.MILESTONE_STAGE
+	check(chain.max_targets() == int(chain.stat("jumps")) + Balance.CHAIN_MILESTONE_JUMPS, "milestone adds jumps")
+	check(chain.strike(first) == 5, "milestone chain should reach all 5 enemies in range")
+	game.free()
+
+
+func test_chain_stops_at_jump_range() -> void:
+	var game = _new_game()
+	var first = _sturdy_enemy(game, Vector2(200, 0))
+	_sturdy_enemy(game, Vector2(200 + Balance.CHAIN_JUMP * 2.0, 0))
+	game._separate_enemies()
+	game._add_weapon("chain")
+	check(game.weapons["chain"].strike(first) == 1, "an enemy beyond the jump range must not be reached")
+	game.free()
+
+
+func test_boomerang_hits_going_out_and_coming_back() -> void:
+	var game = _new_game()
+	var enemy = _sturdy_enemy(game, Vector2(150, 0))
+	game._add_weapon("boomerang")
+	var boomerang = game.weapons["boomerang"]
+	boomerang._cd = 999.0
+	game.player.facing = Vector2.RIGHT
+	boomerang.throw()
+	var start_hp: int = enemy.hp
+	for i in 180:
+		game._separate_enemies()
+		boomerang._physics_process(1.0 / 60.0)
+	var dealt: int = start_hp - enemy.hp
+	check(dealt == boomerang.damage_of(boomerang.stat("damage")) * 2, "boomerang should hit twice, dealt %d" % dealt)
+	check(boomerang.blades.is_empty(), "the blade should be caught and removed")
+	game.free()
+
+
+func test_mine_detonates_and_caps() -> void:
+	var game = _new_game()
+	game._add_weapon("mine")
+	var mine = game.weapons["mine"]
+	mine._cd = 999.0
+	for i in Balance.MINE_MAX + 3:
+		mine.place(Vector2(400 + i * 50, 300))
+	check(mine.mines.size() == Balance.MINE_MAX, "mines should cap at %d" % Balance.MINE_MAX)
+	mine.mines.clear()
+	mine.place(Vector2(300, 0))
+	var enemy = _sturdy_enemy(game, Vector2(300, 0))
+	var start_hp: int = enemy.hp
+	game._separate_enemies()
+	mine._physics_process(Balance.MINE_ARM_TIME + 0.01)
+	check(mine.mines.is_empty(), "an armed mine touched by an enemy should detonate")
+	check(enemy.hp < start_hp, "the blast should damage the enemy")
+	game.free()
+
+
 # --- Passives (with a live game) ---
 
 func test_passives_reach_the_player() -> void:

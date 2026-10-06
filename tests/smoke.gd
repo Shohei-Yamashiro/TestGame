@@ -24,8 +24,9 @@ func _process(_delta: float) -> bool:
 	frame += 1
 	if frame == 2:
 		game._start_game()
-		for id in ["homing", "orbit", "nova", "laser", "wings"]:
-			game._add_weapon(id)
+		for id in game.Balance.WEAPON_ORDER:
+			if not game.weapons.has(id):
+				game._add_weapon(id)
 		for id in game.weapons:
 			game.weapons[id].level = 6
 		for id in game.Balance.PASSIVE_ORDER:

@@ -31,6 +31,9 @@ const WEAPON_SCRIPTS := {
 	"nova": preload("res://scripts/weapons/nova.gd"),
 	"laser": preload("res://scripts/weapons/laser.gd"),
 	"wings": preload("res://scripts/weapons/wings.gd"),
+	"chain": preload("res://scripts/weapons/chain.gd"),
+	"boomerang": preload("res://scripts/weapons/boomerang.gd"),
+	"mine": preload("res://scripts/weapons/mine.gd"),
 }
 
 const UI_ACCENT := Color(0.35, 0.95, 1.0)
