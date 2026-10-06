@@ -87,7 +87,7 @@ const MILESTONE_STAGE := 3
 
 # --- Weapons: each stat array is indexed by level - 1 (Lv1..Lv5); the special keeps Lv5 stats ---
 const STARTING_WEAPON := "blaster"
-const WEAPON_ORDER := ["blaster", "homing", "orbit", "nova", "laser", "wings", "chain", "boomerang", "mine"]
+const WEAPON_ORDER := ["blaster", "homing", "orbit", "nova", "laser", "wings", "chain", "tesseract", "mine"]
 const WEAPONS := {
 	"blaster": {
 		"name": "ブラスター",
@@ -172,17 +172,17 @@ const WEAPONS := {
 		"special": "放電",
 		"special_desc": "連鎖した敵の周りにも放電し、近くの敵を巻き込む",
 	},
-	"boomerang": {
-		"name": "ブーメラン",
-		"desc": "向いている方向へ刃を投げる。刃は戻ってきて、行きと帰りで敵を切る",
+	"tesseract": {
+		"name": "テセラクト",
+		"desc": "回転する4次元立方体を向いている方向へ放つ。戻ってきて、行きと帰りで敵を打つ",
 		"damage": [14, 18, 22, 27, 33],
 		"range": [260.0, 280.0, 300.0, 320.0, 340.0],
 		"interval": [1.8, 1.7, 1.6, 1.5, 1.4],
 		"stats": [["damage", "ダメージが増加", "ダメージ"], ["range", "飛距離が伸びる", "飛距離"], ["interval", "攻撃間隔が短縮", "攻撃間隔"]],
-		"milestone": "2本投げ",
-		"milestone_desc": "左右に開いて2本同時に投げる",
+		"milestone": "二重展開",
+		"milestone_desc": "左右に開いて2個同時に放つ",
 		"special": "旋回",
-		"special_desc": "戻ってきた刃が自機の周りを1周し、近づく敵を切ってから消える",
+		"special_desc": "戻ってきた立方体が自機の周りを1周し、近づく敵を打ってから消える",
 	},
 	"mine": {
 		"name": "設置機雷",
@@ -204,12 +204,12 @@ const CHAIN_MILESTONE_JUMPS := 2
 const CHAIN_DISCHARGE_RADIUS := 60.0
 const CHAIN_DISCHARGE_RATIO := 0.5
 const CHAIN_SHOW := 0.25
-const BOOMERANG_OUT_TIME := 0.45
-const BOOMERANG_RETURN_SPEED := 620.0
-const BOOMERANG_HIT_RADIUS := 18.0
-const BOOMERANG_SPREAD := 0.35
-const BOOMERANG_ORBIT_RADIUS := 70.0
-const BOOMERANG_ORBIT_TIME := 0.6
+const TESSERACT_OUT_TIME := 0.45
+const TESSERACT_RETURN_SPEED := 620.0
+const TESSERACT_HIT_RADIUS := 18.0
+const TESSERACT_SPREAD := 0.35
+const TESSERACT_ORBIT_RADIUS := 70.0
+const TESSERACT_ORBIT_TIME := 0.6
 const MINE_MAX := 8
 const MINE_LIFETIME := 8.0
 const MINE_ARM_TIME := 0.3

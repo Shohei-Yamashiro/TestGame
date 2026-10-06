@@ -353,21 +353,21 @@ func test_chain_stops_at_jump_range() -> void:
 	game.free()
 
 
-func test_boomerang_hits_going_out_and_coming_back() -> void:
+func test_tesseract_hits_going_out_and_coming_back() -> void:
 	var game = _new_game()
 	var enemy = _sturdy_enemy(game, Vector2(150, 0))
-	game._add_weapon("boomerang")
-	var boomerang = game.weapons["boomerang"]
-	boomerang._cd = 999.0
+	game._add_weapon("tesseract")
+	var tesseract = game.weapons["tesseract"]
+	tesseract._cd = 999.0
 	game.player.facing = Vector2.RIGHT
-	boomerang.throw()
+	tesseract.throw()
 	var start_hp: int = enemy.hp
 	for i in 180:
 		game._separate_enemies()
-		boomerang._physics_process(1.0 / 60.0)
+		tesseract._physics_process(1.0 / 60.0)
 	var dealt: int = start_hp - enemy.hp
-	check(dealt == boomerang.damage_of(boomerang.stat("damage")) * 2, "boomerang should hit twice, dealt %d" % dealt)
-	check(boomerang.blades.is_empty(), "the blade should be caught and removed")
+	check(dealt == tesseract.damage_of(tesseract.stat("damage")) * 2, "tesseract should hit twice, dealt %d" % dealt)
+	check(tesseract.cubes.is_empty(), "the cube should be caught and removed")
 	game.free()
 
 

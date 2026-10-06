@@ -13,7 +13,7 @@ const COLORS := {
 	"laser": Palette.LASER,
 	"wings": Palette.WINGS,
 	"chain": Palette.CHAIN,
-	"boomerang": Palette.BOOMERANG,
+	"tesseract": Palette.TESSERACT,
 	"mine": Palette.MINE,
 	"attack": Color(0.9, 0.5, 1.0),
 	"rate": Color(0.5, 0.85, 1.0),
@@ -175,11 +175,16 @@ func _draw_symbol(c: Vector2, r: float, color: Color) -> void:
 			for p in [bolt[0], bolt[3]]:
 				var d := r * 0.24
 				draw_colored_polygon(PackedVector2Array([p + Vector2(0, -d), p + Vector2(d, 0), p + Vector2(0, d), p + Vector2(-d, 0)]), color)
-		"boomerang":
-			var shape := PackedVector2Array()
-			for p in [Vector2(-0.95, -0.55), Vector2(0.0, 0.0), Vector2(0.95, -0.55), Vector2(0.95, -0.1), Vector2(0.0, 0.7), Vector2(-0.95, -0.1)]:
-				shape.append(c + (p as Vector2) * r)
-			draw_colored_polygon(shape, color)
+		"tesseract":
+			var outer := r * 0.85
+			var inner := r * 0.4
+			var corners := [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]
+			for k in 4:
+				var p: Vector2 = corners[k]
+				var q: Vector2 = corners[(k + 1) % 4]
+				draw_line(c + p * outer, c + q * outer, color, 2.0, true)
+				draw_line(c + p * inner, c + q * inner, color, 2.0, true)
+				draw_line(c + p * outer, c + p * inner, Color(color.r, color.g, color.b, 0.6), 1.5, true)
 		"mine":
 			var star := PackedVector2Array()
 			for k in 8:

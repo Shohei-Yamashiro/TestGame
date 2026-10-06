@@ -32,7 +32,7 @@ const WEAPON_SCRIPTS := {
 	"laser": preload("res://scripts/weapons/laser.gd"),
 	"wings": preload("res://scripts/weapons/wings.gd"),
 	"chain": preload("res://scripts/weapons/chain.gd"),
-	"boomerang": preload("res://scripts/weapons/boomerang.gd"),
+	"tesseract": preload("res://scripts/weapons/tesseract.gd"),
 	"mine": preload("res://scripts/weapons/mine.gd"),
 }
 

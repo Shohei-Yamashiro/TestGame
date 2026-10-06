@@ -1,6 +1,6 @@
 extends SceneTree
 
-# Windowed capture of chain lightning, boomerang and mines in action (milestone, then special).
+# Windowed capture of chain lightning, tesseract and mines in action (milestone, then special).
 var game
 var frame := 0
 var shots := "user://ui_shots"
@@ -26,7 +26,7 @@ func _process(_delta: float) -> bool:
 		game._start_game()
 		game.weapons["blaster"].queue_free()
 		game.weapons.erase("blaster")
-		for id in ["chain", "boomerang", "mine"]:
+		for id in ["chain", "tesseract", "mine"]:
 			game._add_weapon(id)
 			game.weapons[id].level = 3
 		game.elapsed = 90.0
@@ -45,7 +45,7 @@ func _process(_delta: float) -> bool:
 		game._on_choice_pressed(0)
 	if frame == 150:
 		_shot("11_weapons_milestone.png")
-		for id in ["chain", "boomerang", "mine"]:
+		for id in ["chain", "tesseract", "mine"]:
 			game.weapons[id].level = 6
 	if frame == 300:
 		_shot("12_weapons_special.png")
