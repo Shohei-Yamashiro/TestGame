@@ -1,0 +1,10 @@
+﻿# policy seed outcome time score  (regenerate with: ./tests/run_tests.ps1 -UpdateBaseline)
+casual 1 DIED 118.8 22510
+casual 2 DIED 98.4 15810
+casual 3 DIED 111.2 13370
+idle 1 DIED 75.2 8440
+idle 2 DIED 66.3 5890
+idle 3 DIED 81.3 9440
+kite 1 DIED 165.2 15680
+kite 2 DIED 116.4 20750
+kite 3 CLEARED 180 119350
