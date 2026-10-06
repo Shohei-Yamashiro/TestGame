@@ -359,42 +359,55 @@ func test_tesseract_blocks_enemies_and_shots() -> void:
 	var tesseract = game.weapons["tesseract"]
 	tesseract._cd = 999.0
 	game.player.facing = Vector2.RIGHT
-	tesseract.place()
+	var origin: Vector2 = game.player.global_position
+	var enemy = _sturdy_enemy(game, origin + Vector2(Balance.TESSERACT_RANGE * 0.5, 0))
+	var start_hp: int = enemy.hp
+	tesseract.launch()
+	for i in int(Balance.TESSERACT_SLIDE_TIME * 60.0) + 1:
+		game._separate_enemies()
+		tesseract._physics_process(1.0 / 60.0)
 	var at: Vector2 = tesseract.cubes[0]["pos"]
-	var enemy = _sturdy_enemy(game, at + Vector2(5, 0))
+	check(not tesseract.is_sliding(tesseract.cubes[0]), "the cube should be at rest after its slide")
+	check(at.distance_to(origin + Vector2(Balance.TESSERACT_RANGE, 0)) < 1.0, "the cube should rest at its full range")
+	check(enemy.hp < start_hp, "a sliding cube should hurt the enemy it pushes")
+	check(enemy.global_position.x > origin.x + Balance.TESSERACT_RANGE * 0.5 + 20.0, "the enemy should be shoved forward")
+	var resting = _sturdy_enemy(game, at + Vector2(0, 5))
 	var shot = load("res://scripts/enemy_shot.gd").new()
 	game.world.add_child(shot)
-	shot.global_position = at + Vector2(0, 4)
-	var start_hp: int = enemy.hp
+	shot.global_position = at + Vector2(4, 0)
+	var resting_hp: int = resting.hp
 	game._separate_enemies()
 	tesseract._physics_process(1.0 / 60.0)
-	var gap: float = enemy.global_position.distance_to(at)
-	check(gap >= tesseract.radius() + enemy.radius - 0.01, "the enemy should be pushed out of the cube, gap %.1f" % gap)
-	check(start_hp - enemy.hp == tesseract.damage_of(tesseract.stat("damage")), "touching should deal contact damage once")
+	var gap: float = resting.global_position.distance_to(at)
+	check(gap >= tesseract.radius() + resting.radius - 0.01, "a resting cube should still push enemies out, gap %.1f" % gap)
+	check(resting.hp == resting_hp, "a resting cube should not hurt without the special")
 	check(shot.is_queued_for_deletion(), "an enemy shot inside the cube should be cancelled")
-	tesseract._physics_process(1.0 / 60.0)
-	check(start_hp - enemy.hp == tesseract.damage_of(tesseract.stat("damage")), "contact damage should wait for its tick")
 	tesseract.cubes[0]["age"] = 999.0
 	tesseract._physics_process(1.0 / 60.0)
 	check(tesseract.cubes.is_empty(), "the cube should vanish after its life")
 	game.free()
 
 
-func test_tesseract_special_pulses() -> void:
+func test_tesseract_special_hurts_at_rest() -> void:
 	var game = _new_game()
 	game._add_weapon("tesseract")
 	var tesseract = game.weapons["tesseract"]
 	tesseract._cd = 999.0
 	tesseract.level = Balance.SPECIAL_STAGE
 	game.player.facing = Vector2.RIGHT
-	tesseract.place()
+	tesseract.launch()
+	check(tesseract.cubes.size() == 2, "the milestone should launch two cubes")
+	var dirs: Array = [tesseract.cubes[0]["dir"], tesseract.cubes[1]["dir"]]
+	check(absf((dirs[0] as Vector2).angle_to(dirs[1])) < PI / 2.0, "the two cubes should fan out at an acute angle")
+	for cube in tesseract.cubes:
+		cube["age"] = Balance.TESSERACT_SLIDE_TIME + 0.1
+	tesseract._physics_process(1.0 / 60.0)
 	var at: Vector2 = tesseract.cubes[0]["pos"]
-	var enemy = _sturdy_enemy(game, at + Vector2(Balance.TESSERACT_PULSE_RADIUS * 0.8, 0))
+	var enemy = _sturdy_enemy(game, at + Vector2(0, -5).rotated((tesseract.cubes[0]["dir"] as Vector2).angle()))
 	var start_hp: int = enemy.hp
 	game._separate_enemies()
-	for i in int(Balance.TESSERACT_PULSE_TICK * 60.0) + 2:
-		tesseract._physics_process(1.0 / 60.0)
-	check(enemy.hp < start_hp, "the special pulse should hurt enemies near the cube")
+	tesseract._physics_process(1.0 / 60.0)
+	check(enemy.hp < start_hp, "with the special a resting cube should hurt enemies it touches")
 	game.free()
 
 

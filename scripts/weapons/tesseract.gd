@@ -8,14 +8,14 @@ const EYE_3D := 4.0
 const TILT_X := 0.5
 const TILT_Y := 0.6
 const DRAW_SCALE := 1.05
-const GROW_TIME := 0.15
 const FADE_TIME := 0.4
-const PULSE_SHOW := 0.3
+const SLIDE_SPIN := 3.0
+const KNOCK := 6.0
 
 var _cd := 0.5
 var _time := 0.0
-# Each cube: {"pos", "age", "life", "phase", "pulse_cd", "since_pulse", "touched"}.
-# "touched" maps an enemy's instance id to the time it may take contact damage again.
+# Each cube: {"pos", "start", "dir", "age", "life", "phase", "touched"}; it slides while age < TESSERACT_SLIDE_TIME.
+# "touched" maps an enemy's instance id to the time it may take damage again.
 var cubes: Array[Dictionary] = []
 var _edges: Array[Vector2i] = []
 
@@ -38,16 +38,15 @@ func _physics_process(delta: float) -> void:
 	_cd -= delta
 	if _cd <= 0.0 and nearest_enemy(Balance.TESSERACT_TRIGGER) != null:
 		_cd = cooldown_of(stat("interval"))
-		place()
+		launch()
 	for i in range(cubes.size() - 1, -1, -1):
 		var cube := cubes[i]
 		cube["age"] = float(cube["age"]) + delta
 		if float(cube["age"]) >= float(cube["life"]):
 			cubes.remove_at(i)
 			continue
+		_slide(cube)
 		_hold(cube)
-		if is_special():
-			_pulse(cube, delta)
 	_block_shots()
 	queue_redraw()
 
@@ -56,59 +55,62 @@ func radius() -> float:
 	return area_of(Balance.TESSERACT_RADIUS)
 
 
-func place() -> void:
-	var dir := player.facing
-	var center := player.global_position + dir * area_of(Balance.TESSERACT_AHEAD)
-	var side := dir.orthogonal() * area_of(Balance.TESSERACT_SIDE)
-	var spots := [center - side, center + side] if is_milestone() else [center]
-	for spot: Vector2 in spots:
+func is_sliding(cube: Dictionary) -> bool:
+	return float(cube["age"]) < Balance.TESSERACT_SLIDE_TIME
+
+
+func launch() -> void:
+	var spreads := [-Balance.TESSERACT_SPREAD, Balance.TESSERACT_SPREAD] if is_milestone() else [0.0]
+	for spread: float in spreads:
 		cubes.append({
-			"pos": spot,
+			"pos": player.global_position,
+			"start": player.global_position,
+			"dir": player.facing.rotated(spread),
 			"age": 0.0,
-			"life": float(stat("life")),
+			"life": Balance.TESSERACT_SLIDE_TIME + float(stat("life")),
 			"phase": randf() * TAU,
-			"pulse_cd": Balance.TESSERACT_PULSE_TICK,
-			"since_pulse": PULSE_SHOW,
 			"touched": {},
 		})
 	while cubes.size() > Balance.TESSERACT_MAX:
 		cubes.pop_front()
 
 
-# Pushes touching enemies back out to the cube's edge and grazes them on a short per-enemy cooldown.
+# Eases out from the launch point and comes to rest at the full range.
+func _slide(cube: Dictionary) -> void:
+	var x := clampf(float(cube["age"]) / Balance.TESSERACT_SLIDE_TIME, 0.0, 1.0)
+	var travel := area_of(Balance.TESSERACT_RANGE) * (1.0 - (1.0 - x) * (1.0 - x))
+	cube["pos"] = (cube["start"] as Vector2) + (cube["dir"] as Vector2) * travel
+
+
+# Pushes touching enemies out to the cube's edge. They take damage while it slides, and at rest only with the special.
 func _hold(cube: Dictionary) -> void:
 	var at: Vector2 = cube["pos"]
 	var r := radius()
 	var touched: Dictionary = cube["touched"]
+	var sliding := is_sliding(cube)
+	var hurts := sliding or is_special()
 	for enemy in enemies_in_circle(at, r):
 		var offset: Vector2 = enemy.global_position - at
-		var out := offset.normalized() if offset.length_squared() > 0.01 else player.facing
+		var out := offset.normalized() if offset.length_squared() > 0.01 else (cube["dir"] as Vector2)
 		enemy.global_position = at + out * (r + float(enemy.radius))
+		if not hurts:
+			continue
 		var key: int = enemy.get_instance_id()
 		if float(touched.get(key, 0.0)) > _time:
 			continue
-		touched[key] = _time + Balance.TESSERACT_CONTACT_TICK
+		var damage := damage_of(stat("damage"))
+		if sliding:
+			touched[key] = _time + Balance.TESSERACT_HIT_TICK
+		else:
+			touched[key] = _time + Balance.TESSERACT_REST_TICK
+			damage = maxi(1, int(round(float(damage) * Balance.TESSERACT_REST_RATIO)))
 		if fx:
 			fx.hit_sparks(at + out * r, out, Palette.hdr(Palette.TESSERACT, 1.3))
-		enemy.take_damage(damage_of(stat("damage")), out, 0.0)
+		enemy.take_damage(damage, out, KNOCK if sliding else 0.0)
 	if touched.size() > 32:
 		for key in touched.keys():
 			if float(touched[key]) <= _time:
 				touched.erase(key)
-
-
-func _pulse(cube: Dictionary, delta: float) -> void:
-	cube["since_pulse"] = float(cube["since_pulse"]) + delta
-	cube["pulse_cd"] = float(cube["pulse_cd"]) - delta
-	if float(cube["pulse_cd"]) > 0.0:
-		return
-	cube["pulse_cd"] = Balance.TESSERACT_PULSE_TICK
-	cube["since_pulse"] = 0.0
-	var at: Vector2 = cube["pos"]
-	var damage := maxi(1, int(round(float(damage_of(stat("damage"))) * Balance.TESSERACT_PULSE_RATIO)))
-	for enemy in enemies_in_circle(at, area_of(Balance.TESSERACT_PULSE_RADIUS)):
-		var out: Vector2 = (enemy.global_position - at).normalized()
-		enemy.take_damage(damage, out)
 
 
 func _block_shots() -> void:
@@ -155,21 +157,20 @@ func _draw() -> void:
 		var at: Vector2 = cube["pos"]
 		var age: float = cube["age"]
 		var fade := clampf((float(cube["life"]) - age) / FADE_TIME, 0.0, 1.0)
-		var grow := clampf(age / GROW_TIME, 0.0, 1.0)
-		var s := r * DRAW_SCALE * grow
-		draw_circle(at, r * grow, Color(tint.r, tint.g, tint.b, 0.1 * fade))
-		draw_arc(at, r * grow, 0.0, TAU, 32, Color(tint.r, tint.g, tint.b, 0.35 * fade), 1.0, true)
-		var projected := _project(_time + float(cube["phase"]))
+		var sliding := is_sliding(cube)
+		var hot := sliding or is_special()
+		var s := r * DRAW_SCALE
+		draw_circle(at, r, Color(tint.r, tint.g, tint.b, (0.18 if hot else 0.08) * fade))
+		draw_arc(at, r, 0.0, TAU, 32, Color(tint.r, tint.g, tint.b, (0.6 if hot else 0.3) * fade), 1.0, true)
+		# Spins fast while sliding and slows to a calm turn once it rests.
+		var slide_left := maxf(0.0, Balance.TESSERACT_SLIDE_TIME - age)
+		var spin_t := _time + float(cube["phase"]) - slide_left * slide_left * SLIDE_SPIN
+		var projected := _project(spin_t)
 		var points: PackedVector2Array = projected[0]
 		var depths: PackedFloat32Array = projected[1]
+		var glow := 1.0 if hot else 0.75
 		for edge in _edges:
 			var near := (depths[edge.x] + depths[edge.y]) * 0.5
-			var color := Palette.hdr(tint, lerpf(0.9, 2.0, near))
+			var color := Palette.hdr(tint, lerpf(0.9, 2.0, near) * glow)
 			color.a = lerpf(0.45, 1.0, near) * fade
 			draw_line(at + points[edge.x] * s, at + points[edge.y] * s, color, lerpf(1.0, 2.2, near), true)
-		var since: float = cube["since_pulse"]
-		if is_special() and since < PULSE_SHOW:
-			var x := since / PULSE_SHOW
-			var ring := Palette.hdr(tint, 1.6)
-			ring.a = (1.0 - x) * fade
-			draw_arc(at, lerpf(r, area_of(Balance.TESSERACT_PULSE_RADIUS), x), 0.0, TAU, 48, ring, 2.5 * (1.0 - x) + 0.5, true)
