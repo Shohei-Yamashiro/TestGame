@@ -1,0 +1,10 @@
+---
+description: 期日付きのフォローアップ（ユーザーに通知するもの）
+alwaysApply: true
+---
+
+# 期日になったらユーザーに知らせること
+
+会話の最初の返答で今日の日付を確認し、期日を過ぎていて issue が open のままなら一言知らせる。
+
+- 2026-10-19 以降: [#5](https://github.com/Shohei-Yamashiro/TestGame/issues/5) ubuntu-latest が Ubuntu 26 に移行。CI が通るか確認する（GitHub 側でも Reminders ワークフローが CI を再実行し、issue でメンションする）。
