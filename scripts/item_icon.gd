@@ -74,7 +74,7 @@ func _draw() -> void:
 		draw_polyline(Palette.closed(_tile(c, s * 0.5 + 1.5)), GOLD, 3.0, true)
 	else:
 		draw_polyline(Palette.closed(tile), color.lightened(0.35), 1.5, true)
-	_draw_symbol(c, s * 0.34, GLYPH)
+	_draw_symbol(c, s * 0.42, GLYPH)
 	_draw_pips(Vector2(s * 0.5, s + 7.0 * _pip_scale()), color.lightened(0.2))
 
 
@@ -158,24 +158,30 @@ func _draw_symbol(c: Vector2, r: float, color: Color) -> void:
 			draw_line(streaks[2], streaks[3], Color(color.r, color.g, color.b, 0.6), 1.5, true)
 			draw_line(streaks[4], streaks[5], Color(color.r, color.g, color.b, 0.6), 1.5, true)
 		"homing":
-			# A missile curving in on a reticle, its trail fading toward the launch point.
-			var target := c + Vector2(r * 0.45, -r * 0.45)
-			draw_arc(target, r * 0.4, 0.0, TAU, 20, color, 1.5, true)
+			# A missile that has swung round and now lunges at a distant reticle.
+			var target := c + Vector2(r * 0.7, -r * 0.7)
+			draw_arc(target, r * 0.26, 0.0, TAU, 20, color, 1.5, true)
 			for k in 4:
 				var d := Vector2.from_angle(PI * 0.5 * float(k))
-				draw_line(target + d * r * 0.28, target + d * r * 0.58, color, 1.5, true)
-			var start := c + Vector2(-r * 0.95, r * 0.8)
-			var bend := c + Vector2(r * 0.5, r * 0.95)
-			var head := c + Vector2(r * 0.12, -r * 0.05)
+				draw_line(target + d * r * 0.14, target + d * r * 0.4, color, 1.5, true)
+			var head := c + Vector2(-r * 0.3, r * 0.3)
+			var dir := (target - head).normalized()
+			var start := c + Vector2(-r * 1.0, -r * 0.2)
+			var bend := head - dir * r * 0.75
 			var trail := PackedVector2Array()
 			for i in 13:
 				var t := float(i) / 12.0
 				trail.append(start.lerp(bend, t).lerp(bend.lerp(head, t), t))
 			for i in 12:
-				draw_line(trail[i], trail[i + 1], Color(color.r, color.g, color.b, 0.2 + 0.8 * float(i) / 11.0), 2.5, true)
-			var dir := (head - trail[11]).normalized()
-			var side := dir.orthogonal() * r * 0.3
-			draw_colored_polygon(PackedVector2Array([head + dir * r * 0.5, head + side, head - dir * r * 0.05, head - side]), color)
+				draw_line(trail[i], trail[i + 1], Color(color.r, color.g, color.b, 0.3 + 0.7 * float(i) / 11.0), 3.0, true)
+			var side := dir.orthogonal()
+			draw_colored_polygon(PackedVector2Array([
+				head + dir * r * 0.55, head + dir * r * 0.15 + side * r * 0.14, head - dir * r * 0.2 + side * r * 0.3,
+				head - dir * r * 0.1, head - dir * r * 0.2 - side * r * 0.3, head + dir * r * 0.15 - side * r * 0.14,
+			]), color)
+			for k in 3:
+				var p := head + dir * r * (0.72 + 0.14 * float(k))
+				draw_circle(p, r * 0.045, Color(color.r, color.g, color.b, 0.6))
 		"orbit":
 			draw_arc(c, r * 0.9, 0.0, TAU, 24, Color(color.r, color.g, color.b, 0.6), 1.5, true)
 			draw_circle(c, r * 0.18, color)
@@ -223,11 +229,15 @@ func _draw_symbol(c: Vector2, r: float, color: Color) -> void:
 				draw_line(c + p * inner, c + q * inner, color, 2.0, true)
 				draw_line(c + p * outer, c + p * inner, Color(color.r, color.g, color.b, 0.6), 1.5, true)
 		"mine":
-			var star := PackedVector2Array()
-			for k in 8:
-				star.append(c + Vector2.from_angle(PI * float(k) / 4.0) * (r * 0.95 if k % 2 == 0 else r * 0.45))
-			draw_polyline(Palette.closed(star), color, 2.0, true)
-			draw_circle(c, r * 0.22, color)
+			# A proximity mine: a lit core in a round casing, ringed by its dashed trigger range.
+			for k in 12:
+				var a := TAU * float(k) / 12.0
+				draw_arc(c, r * 1.0, a, a + TAU / 24.0, 4, Color(color.r, color.g, color.b, 0.6), 1.5, true)
+			draw_arc(c, r * 0.6, 0.0, TAU, 28, color, 2.5, true)
+			draw_circle(c, r * 0.3, color)
+			for k in 4:
+				var d := Vector2.from_angle(PI * 0.25 + PI * 0.5 * float(k))
+				draw_circle(c + d * r * 0.6, r * 0.09, color)
 		"drain":
 			var a := c + Vector2(-r * 0.62, r * 0.62)
 			var b := c + Vector2(r * 0.62, -r * 0.62)
@@ -260,9 +270,19 @@ func _draw_symbol(c: Vector2, r: float, color: Color) -> void:
 			draw_line(c, c + Vector2.from_angle(-PI * 0.5 - 0.5) * r * 0.5, color, 2.5, true)
 			draw_circle(c, r * 0.13, color)
 		"move":
-			for i in 2:
-				var x := -r * 0.55 + float(i) * r * 0.65
-				draw_polyline(PackedVector2Array([c + Vector2(x, -r * 0.7), c + Vector2(x + r * 0.55, 0), c + Vector2(x, r * 0.7)]), color, 3.0, true)
+			# A winged shoe facing right.
+			var shoe := PackedVector2Array()
+			for p: Vector2 in [Vector2(-0.45, -0.6), Vector2(0.0, -0.6), Vector2(0.06, -0.18), Vector2(0.45, -0.02),
+					Vector2(0.78, 0.14), Vector2(0.92, 0.32), Vector2(0.9, 0.55), Vector2(-0.58, 0.55), Vector2(-0.62, 0.12)]:
+				shoe.append(c + p * r)
+			draw_colored_polygon(shoe, color)
+			draw_line(c + Vector2(-0.58, 0.38) * r, c + Vector2(0.9, 0.38) * r, Color(0, 0, 0, 0.35), 2.0, true)
+			var root := c + Vector2(-0.45, -0.2) * r
+			for i in 3:
+				var tip := c + Vector2(-0.88 - 0.06 * float(i), -0.75 + 0.36 * float(i)) * r
+				var normal := (tip - root).orthogonal().normalized() * r * (0.24 - 0.04 * float(i))
+				draw_colored_polygon(PackedVector2Array([root, (root + tip) * 0.5 + normal, tip, (root + tip) * 0.5 - normal * 0.3]),
+					Color(color.r, color.g, color.b, 1.0 - 0.2 * float(i)))
 		"magnet":
 			# A horseshoe magnet with a small gem being drawn in.
 			draw_arc(c + Vector2(0, -r * 0.1), r * 0.6, 0.0, PI, 16, color, r * 0.32, true)
@@ -281,20 +301,29 @@ func _draw_symbol(c: Vector2, r: float, color: Color) -> void:
 				heart.append(c + Vector2(x, -y - 2.0) * r / 16.0)
 			draw_colored_polygon(heart, color)
 		"regen":
-			draw_colored_polygon(_cross(c, r * 0.5, r * 0.18), color)
+			# A cross inside two arrows chasing each other round.
+			draw_colored_polygon(_cross(c, r * 0.48, r * 0.17), color)
 			for side in [0.0, PI]:
-				draw_arc(c, r * 0.9, side - 0.4, side + 1.3, 12, color, 2.0, true)
-				var tip := c + Vector2.from_angle(side + 1.3) * r * 0.9
-				var d := Vector2.from_angle(side + 1.3 + PI * 0.5) * r * 0.3
-				draw_colored_polygon(PackedVector2Array([tip + d, tip + d.orthogonal() * 0.7, tip - d.orthogonal() * 0.7]), color)
+				var end: float = side + PI - 0.55
+				draw_arc(c, r * 0.85, side + 0.2, end, 16, color, 2.5, true)
+				var tip := c + Vector2.from_angle(end) * r * 0.85
+				var ahead := Vector2.from_angle(end + PI * 0.5) * r * 0.36
+				var out := Vector2.from_angle(end) * r * 0.24
+				draw_colored_polygon(PackedVector2Array([tip + ahead, tip + out, tip - out]), color)
 		"area":
-			for i in 3:
-				var size := r * (0.35 + 0.33 * float(i))
-				var diamond := PackedVector2Array([c + Vector2(0, -size), c + Vector2(size, 0), c + Vector2(0, size), c + Vector2(-size, 0)])
-				if i == 0:
-					draw_colored_polygon(diamond, color)
-				else:
-					draw_polyline(Palette.closed(diamond), Color(color.r, color.g, color.b, 1.0 - 0.3 * float(i)), 1.5, true)
+			# Arrows pushing a marked zone outward toward every corner.
+			var half := r * 0.5
+			for k in 4:
+				var a := Vector2(-half, -half).rotated(PI * 0.5 * float(k))
+				var b := Vector2(half, -half).rotated(PI * 0.5 * float(k))
+				for t in [0.0, 0.6]:
+					draw_line(c + a.lerp(b, t), c + a.lerp(b, t + 0.4), Color(color.r, color.g, color.b, 0.5), 1.5, true)
+			draw_circle(c, r * 0.16, color)
+			for k in 4:
+				var d := Vector2.from_angle(PI * 0.25 + PI * 0.5 * float(k))
+				var tip := c + d * r * 1.05
+				draw_line(c + d * r * 0.35, tip - d * r * 0.2, color, 2.5, true)
+				draw_colored_polygon(PackedVector2Array([tip, tip - d * r * 0.36 + d.orthogonal() * r * 0.2, tip - d * r * 0.36 - d.orthogonal() * r * 0.2]), color)
 		"armor":
 			var shield := Palette.regular_polygon(6, r * 1.0, PI / 6.0)
 			for i in shield.size():
@@ -305,16 +334,27 @@ func _draw_symbol(c: Vector2, r: float, color: Color) -> void:
 				core[i] += c
 			draw_colored_polygon(core, color)
 		"growth":
-			for i in 2:
-				var y := r * 0.55 - float(i) * r * 0.65
-				draw_polyline(PackedVector2Array([c + Vector2(-r * 0.7, y), c + Vector2(0, y - r * 0.55), c + Vector2(r * 0.7, y)]), color, 3.0, true)
-			draw_line(c + Vector2(-r * 0.7, r * 0.95), c + Vector2(r * 0.7, r * 0.95), color, 2.0, true)
+			# An XP crystal with an arrow climbing beside it.
+			var g := c + Vector2(-r * 0.3, r * 0.05)
+			var gem := PackedVector2Array([g + Vector2(0, -r * 0.9), g + Vector2(r * 0.55, -r * 0.2), g + Vector2(0, r * 0.9), g + Vector2(-r * 0.55, -r * 0.2)])
+			draw_colored_polygon(gem, Color(color.r, color.g, color.b, 0.55))
+			draw_polyline(Palette.closed(gem), color, 2.0, true)
+			draw_line(gem[1], gem[3], color, 1.5, true)
+			draw_line(gem[0], gem[2], Color(color.r, color.g, color.b, 0.7), 1.0, true)
+			var x := c.x + r * 0.62
+			draw_line(Vector2(x, c.y + r * 0.85), Vector2(x, c.y - r * 0.4), color, 3.0, true)
+			draw_colored_polygon(PackedVector2Array([
+				Vector2(x, c.y - r * 0.95), Vector2(x + r * 0.32, c.y - r * 0.4), Vector2(x - r * 0.32, c.y - r * 0.4),
+			]), color)
 		"knock":
-			var s := r * 0.32
-			draw_colored_polygon(PackedVector2Array([c + Vector2(-s, -s), c + Vector2(s, -s), c + Vector2(s, s), c + Vector2(-s, s)]), color)
-			for side in [-1.0, 1.0]:
-				var x: float = side * r * 0.62
-				draw_polyline(PackedVector2Array([c + Vector2(x, -r * 0.6), c + Vector2(x + side * r * 0.4, 0), c + Vector2(x, r * 0.6)]), color, 2.5, true)
+			# A shock front slamming into an enemy and driving it off to the right.
+			draw_arc(c + Vector2(-r * 1.55, 0), r * 0.95, -0.75, 0.75, 12, color, 3.5, true)
+			for y in [-0.42, 0.0, 0.42]:
+				draw_line(c + Vector2(-r * 0.4, r * y), c + Vector2(r * (0.05 if y == 0.0 else -0.05), r * y), Color(color.r, color.g, color.b, 0.7), 2.0, true)
+			var foe := Palette.regular_polygon(3, r * 0.5, 0.35)
+			for i in foe.size():
+				foe[i] += c + Vector2(r * 0.55, 0)
+			draw_colored_polygon(foe, color)
 
 
 # Points given as (along, across) in units of r, laid along the direction `angle` from c.
