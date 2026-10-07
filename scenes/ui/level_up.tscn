@@ -76,19 +76,20 @@ icon_size = 50.0
 [node name="Heading" type="Label" parent="Root/Choice0"]
 layout_mode = 0
 offset_left = 100.0
-offset_top = 10.0
-offset_right = 560.0
-offset_bottom = 46.0
-theme_override_font_sizes/font_size = 23
+offset_top = 8.0
+offset_right = 568.0
+offset_bottom = 40.0
+theme_override_font_sizes/font_size = 21
 
 [node name="Detail" type="Label" parent="Root/Choice0"]
 layout_mode = 0
 offset_left = 100.0
-offset_top = 50.0
-offset_right = 560.0
-offset_bottom = 80.0
+offset_top = 40.0
+offset_right = 568.0
+offset_bottom = 88.0
 theme_override_colors/font_color = Color(0.75, 0.9, 1, 1)
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 15
+autowrap_mode = 3
 
 [node name="Choice1" type="Button" parent="Root"]
 custom_minimum_size = Vector2(580, 92)
@@ -111,19 +112,20 @@ icon_size = 50.0
 [node name="Heading" type="Label" parent="Root/Choice1"]
 layout_mode = 0
 offset_left = 100.0
-offset_top = 10.0
-offset_right = 560.0
-offset_bottom = 46.0
-theme_override_font_sizes/font_size = 23
+offset_top = 8.0
+offset_right = 568.0
+offset_bottom = 40.0
+theme_override_font_sizes/font_size = 21
 
 [node name="Detail" type="Label" parent="Root/Choice1"]
 layout_mode = 0
 offset_left = 100.0
-offset_top = 50.0
-offset_right = 560.0
-offset_bottom = 80.0
+offset_top = 40.0
+offset_right = 568.0
+offset_bottom = 88.0
 theme_override_colors/font_color = Color(0.75, 0.9, 1, 1)
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 15
+autowrap_mode = 3
 
 [node name="Choice2" type="Button" parent="Root"]
 custom_minimum_size = Vector2(580, 92)
@@ -146,16 +148,17 @@ icon_size = 50.0
 [node name="Heading" type="Label" parent="Root/Choice2"]
 layout_mode = 0
 offset_left = 100.0
-offset_top = 10.0
-offset_right = 560.0
-offset_bottom = 46.0
-theme_override_font_sizes/font_size = 23
+offset_top = 8.0
+offset_right = 568.0
+offset_bottom = 40.0
+theme_override_font_sizes/font_size = 21
 
 [node name="Detail" type="Label" parent="Root/Choice2"]
 layout_mode = 0
 offset_left = 100.0
-offset_top = 50.0
-offset_right = 560.0
-offset_bottom = 80.0
+offset_top = 40.0
+offset_right = 568.0
+offset_bottom = 88.0
 theme_override_colors/font_color = Color(0.75, 0.9, 1, 1)
-theme_override_font_sizes/font_size = 16
+theme_override_font_sizes/font_size = 15
+autowrap_mode = 3
