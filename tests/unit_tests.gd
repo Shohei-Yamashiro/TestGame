@@ -430,6 +430,65 @@ func test_mine_detonates_and_caps() -> void:
 	game.free()
 
 
+# Lines a label needs for text, from its own font, size and width (wrapping can only add a little, hence the margin).
+func _lines_needed(label: Label, text: String) -> int:
+	var font := label.get_theme_font("font")
+	var size := label.get_theme_font_size("font_size")
+	var inner := label.size.x - label.get_theme_stylebox("normal").get_minimum_size().x
+	var lines := 0
+	for part in text.split("\n"):
+		var width := font.get_string_size(part, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+		lines += 1 if width <= inner else ceili(width / (inner * 0.95))
+	return lines
+
+
+func test_level_up_texts_fit_their_cards() -> void:
+	var layer = (load("res://scenes/ui/level_up.tscn") as PackedScene).instantiate()
+	root.add_child(layer)
+	var heading: Label = layer.get_node("Root/Choice0/Heading")
+	var detail: Label = layer.get_node("Root/Choice0/Detail")
+	check(detail.autowrap_mode != TextServer.AUTOWRAP_OFF, "level-up detail should wrap onto a second line")
+	var LevelUp = load("res://scripts/ui/level_up.gd")
+	var headings: Array[String] = []
+	var details: Array[String] = []
+	for id in Balance.WEAPON_ORDER:
+		var d: Dictionary = Balance.WEAPONS[id]
+		headings.append_array(["%s   NEW" % d["name"], "◆ %s  強化：%s" % [d["name"], d["milestone"]], "★ %s  スペシャル：%s" % [d["name"], d["special"]]])
+		details.append_array([d["desc"], d["milestone_desc"], d["special_desc"]])
+		for i in Balance.MAX_STAGE - 1:
+			details.append(LevelUp.stats_detail(d, i, i + 1))
+	for id in Balance.PASSIVE_ORDER:
+		headings.append("%s   NEW" % Balance.PASSIVES[id]["name"])
+		for i in Balance.MAX_STAGE:
+			details.append(LevelUp.stats_detail(Balance.PASSIVES[id], i, i + 1))
+	for text in headings:
+		check(_lines_needed(heading, text) == 1, "level-up heading must fit on one line: %s" % text)
+	for text in details:
+		check(_lines_needed(detail, text) <= 2, "level-up detail must fit in two lines: %s" % text)
+	layer.free()
+
+
+func test_library_texts_fit_their_boxes() -> void:
+	var layer = (load("res://scenes/ui/library.tscn") as PackedScene).instantiate()
+	root.add_child(layer)
+	var desc: Label = layer.get_node("Root/Detail/Desc")
+	var milestone: Label = layer.get_node("Root/Detail/Milestone")
+	for id in Balance.WEAPON_ORDER:
+		var d: Dictionary = Balance.WEAPONS[id]
+		check(_lines_needed(desc, d["desc"]) <= 2, "library description must fit in two lines: %s" % d["desc"])
+		for pair in [["強化", d["milestone"], d["milestone_desc"]], ["スペシャル", d["special"], d["special_desc"]]]:
+			var text := "Lv6 %s：%s\n%s" % pair
+			check(_lines_needed(milestone, text) <= 3, "library %s box must fit in three lines: %s" % [pair[0], pair[2]])
+	layer.free()
+
+
+func test_hp_bar_grows_with_max_hp() -> void:
+	var panel = load("res://scripts/ui/status_panel.gd")
+	check(is_equal_approx(panel.bar_width(200), panel.bar_width(100) * 2.0), "the HP bar should be twice as long at double max HP")
+	var widest: int = Balance.PASSIVES["max_hp"]["max_hp"][Balance.MAX_STAGE]
+	check(panel.BAR_LEFT + panel.bar_width(widest) < 540.0, "the longest HP bar must stay clear of the centred timer")
+
+
 func test_choices_respect_slot_limits() -> void:
 	var game = _new_game()
 	# The run starts with the blaster, so one weapon slot is already taken.
