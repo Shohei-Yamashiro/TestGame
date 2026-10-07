@@ -2,7 +2,7 @@ extends RefCounted
 
 # --- Player ---
 const PLAYER_MAX_HP := 100
-const HURT_INTERVAL := 0.5
+const HURT_INTERVAL := 0.4
 const CONTACT_STACK := 3
 const BULLET_SPEED := 560.0
 const BASE_MAGNET := 180.0
@@ -22,13 +22,13 @@ const MAX_PASSIVES := 4
 const MAX_STAGE := 5
 const SPECIAL_STAGE := 6
 const HEAL_AMOUNT := 35
-# Repair kits dropped by enemies: the chance per kill grows with the enemy's XP, and only a few lie about at once.
-const HEAL_DROP_PER_XP := 0.08
-const HEAL_MAX_ON_FIELD := 5
-const HEAL_PICKUP := 25
+# Small repair kits dropped by enemies: the chance per kill grows with the enemy's XP. They stay until taken,
+# with a cap so a long detour-free run doesn't litter the arena.
+const HEAL_DROP_PER_XP := 0.18
+const HEAL_MAX_ON_FIELD := 30
+const HEAL_PICKUP := 8
 # Points for a kit picked up at full HP.
-const HEAL_SCORE := 150
-const HEAL_LIFETIME := 20.0
+const HEAL_SCORE := 50
 
 # "stats" entries are [key, level-up text, short label for the library table].
 
@@ -353,7 +353,7 @@ const ENEMY_SPEED_RAMP := 0.4
 const ENEMY_MAX_SPEED := 250.0
 const ENEMY_CAP := 220
 # Scales every contact and shot hit; tuned together with heal drops so HP swings rather than drains.
-const ENEMY_DAMAGE_MULT := 1.3
+const ENEMY_DAMAGE_MULT := 0.75
 const KNOCKBACK := 14.0
 
 

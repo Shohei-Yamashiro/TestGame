@@ -1,16 +1,15 @@
 extends Node2D
 
-# A repair kit dropped by enemies: walk over it to recover HP. The magnet does not pull it in,
-# so grabbing one means a short detour; it blinks before it fades away.
+# A small repair kit dropped by enemies: walk over it to recover a little HP. Like gems it stays until taken,
+# but the magnet does not pull it in, so grabbing one means a short detour.
 
 const Palette := preload("res://scripts/palette.gd")
 const Balance := preload("res://scripts/balance.gd")
 
 signal collected(amount: int)
 
-const PICKUP_RADIUS := 26.0
-const SIZE := 11.0
-const BLINK_TIME := 5.0
+const PICKUP_RADIUS := 22.0
+const SIZE := 7.0
 
 var _age := 0.0
 var _player: Node2D
@@ -24,31 +23,25 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	_age += delta
-	if _age >= Balance.HEAL_LIFETIME:
-		queue_free()
-		return
 	queue_redraw()
 	if _player == null or not bool(_player.get("alive")):
 		return
 	if global_position.distance_squared_to(_player.global_position) <= PICKUP_RADIUS * PICKUP_RADIUS:
 		var fx := get_tree().get_first_node_in_group("fx")
 		if fx:
-			fx.ring(global_position, Palette.hdr(Palette.HEAL, 1.8), 40.0, 0.35)
-			fx.burst(global_position, Palette.hdr(Palette.HEAL, 1.5), 12, 220.0)
+			fx.ring(global_position, Palette.hdr(Palette.HEAL, 1.8), 28.0, 0.3)
+			fx.burst(global_position, Palette.hdr(Palette.HEAL, 1.5), 8, 180.0)
 		collected.emit(Balance.HEAL_PICKUP)
 		remove_from_group("heals")
 		queue_free()
 
 
 func _draw() -> void:
-	var left := Balance.HEAL_LIFETIME - _age
-	if left < BLINK_TIME and fmod(_age, 0.3) < 0.12:
-		return
-	var bob := sin(_age * 3.0) * 2.0
+	var bob := sin(_age * 3.0) * 1.5
 	var center := Vector2(0, bob)
 	var halo := Palette.HEAL
 	halo.a = 0.14 + 0.06 * sin(_age * 5.0)
-	draw_circle(center, SIZE * 1.9, halo)
+	draw_circle(center, SIZE * 1.8, halo)
 	# A hexagon (friendly, even-sided) holding a plus sign.
 	var hex := Palette.regular_polygon(6, SIZE, PI / 6.0)
 	for i in hex.size():

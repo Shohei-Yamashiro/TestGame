@@ -384,12 +384,12 @@ func test_heal_drops_are_capped_and_heal_on_pickup() -> void:
 	game.free()
 
 
-func test_heal_kits_expire() -> void:
+func test_heal_kits_stay_until_taken() -> void:
 	var game = _new_game()
 	game.drop_heal(Vector2(2000, 2000))
 	var kit = game.get_tree().get_nodes_in_group("heals")[0]
-	kit._physics_process(Balance.HEAL_LIFETIME + 0.1)
-	check(kit.is_queued_for_deletion(), "an untouched kit should vanish after its lifetime")
+	kit._physics_process(600.0)
+	check(not kit.is_queued_for_deletion(), "an untouched kit should stay like a gem")
 	game.free()
 
 
