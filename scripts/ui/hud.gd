@@ -9,6 +9,7 @@ const TEXT_COLOR := Color(0.96, 0.97, 0.98)
 @onready var _status: StatusPanel = $Root/Status
 @onready var _time_label: Label = $Root/TimeLabel
 @onready var _score_label: Label = $Root/ScoreLabel
+@onready var _kills_label: Label = $Root/KillsLabel
 @onready var _weapon_icons: Array[Node] = $Root/WeaponIcons.get_children()
 @onready var _passive_icons: Array[Node] = $Root/PassiveIcons.get_children()
 
@@ -24,6 +25,7 @@ func refresh(game) -> void:
 	else:
 		_time_label.add_theme_color_override("font_color", TEXT_COLOR)
 	_score_label.text = "%d" % game.score
+	_kills_label.text = "%d" % game.kills
 	var weapon_ids: Array = game.weapons.keys()
 	for i in _weapon_icons.size():
 		if i < weapon_ids.size():

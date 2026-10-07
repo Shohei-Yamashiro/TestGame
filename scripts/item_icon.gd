@@ -1,32 +1,36 @@
 extends Control
 
-# Symbol-only badge for a weapon or passive: a framed glyph with level pips underneath.
+# Badge for a weapon or passive: a white glyph on a tile of the item's own colour, with level pips underneath.
+# Weapons sit on rounded squares and passives on circles. Icons are exempt from the warm/cool art rule,
+# so every item can have a hue of its own.
 
 const Palette := preload("res://scripts/palette.gd")
 const Balance := preload("res://scripts/balance.gd")
 
 const COLORS := {
-	"blaster": Palette.BULLET,
-	"homing": Palette.HOMING,
-	"orbit": Palette.ORBIT,
-	"nova": Palette.NOVA,
-	"laser": Palette.LASER,
-	"wings": Palette.WINGS,
-	"chain": Palette.CHAIN,
-	"tesseract": Palette.TESSERACT,
-	"mine": Palette.MINE,
-	"drain": Palette.DRAIN,
-	"attack": Color(0.9, 0.5, 1.0),
-	"rate": Color(0.5, 0.85, 1.0),
-	"move": Color(0.45, 1.0, 0.65),
-	"magnet": Color(0.8, 0.65, 1.0),
-	"max_hp": Color(0.55, 0.6, 1.0),
-	"regen": Color(0.3, 1.0, 0.85),
-	"area": Color(0.25, 0.65, 1.0),
-	"armor": Color(0.75, 0.85, 1.0),
-	"growth": Color(0.35, 0.95, 1.0),
-	"knock": Color(0.45, 0.45, 1.0),
+	"blaster": Color(0.2, 0.55, 1.0),
+	"homing": Color(0.2, 0.78, 0.4),
+	"orbit": Color(0.55, 0.38, 1.0),
+	"nova": Color(1.0, 0.55, 0.15),
+	"laser": Color(1.0, 0.25, 0.45),
+	"wings": Color(0.15, 0.8, 0.9),
+	"chain": Color(0.95, 0.8, 0.15),
+	"tesseract": Color(0.1, 0.65, 0.6),
+	"mine": Color(0.9, 0.3, 0.15),
+	"drain": Color(0.8, 0.25, 0.85),
+	"attack": Color(1.0, 0.3, 0.25),
+	"rate": Color(1.0, 0.75, 0.15),
+	"move": Color(0.35, 0.85, 0.3),
+	"magnet": Color(0.95, 0.4, 0.75),
+	"max_hp": Color(0.95, 0.35, 0.5),
+	"regen": Color(0.2, 0.8, 0.6),
+	"area": Color(1.0, 0.5, 0.2),
+	"armor": Color(0.5, 0.6, 0.78),
+	"growth": Color(0.3, 0.65, 1.0),
+	"knock": Color(0.6, 0.45, 1.0),
 }
+const GLYPH := Color(1.0, 1.0, 1.0, 0.95)
+const GOLD := Color(1.0, 0.85, 0.35)
 var item_id := ""
 var is_weapon := true
 var level := 0
@@ -55,28 +59,39 @@ func _draw() -> void:
 	var color: Color = COLORS.get(item_id, Color(0.5, 0.6, 0.7))
 	var filled := item_id != ""
 	var special := is_weapon and level >= Balance.SPECIAL_STAGE
-	var frame := _octagon(c, s * 0.5)
-	draw_colored_polygon(frame, Color(color.r * 0.1, color.g * 0.12, color.b * 0.18, 0.9 if filled else 0.35))
-	var border := color if filled else Color(0.5, 0.6, 0.7, 0.35)
-	if special:
-		var gold := Color(1.0, 0.85, 0.35)
-		draw_colored_polygon(frame, Color(gold.r, gold.g, gold.b, 0.1))
-		draw_polyline(Palette.closed(frame), gold, 2.0, true)
-		draw_polyline(Palette.closed(_octagon(c, s * 0.5 - 4.0)), Color(gold.r, gold.g, gold.b, 0.75), 1.0, true)
-	else:
-		draw_polyline(Palette.closed(frame), border, 1.5, true)
+	var tile := _tile(c, s * 0.5)
 	if not filled:
+		draw_colored_polygon(tile, Color(0.05, 0.07, 0.1, 0.45))
+		draw_polyline(Palette.closed(tile), Color(0.5, 0.6, 0.7, 0.3), 1.0, true)
 		return
-	_draw_symbol(c, s * 0.36, color)
-	_draw_pips(Vector2(s * 0.5, s + 8.0), color)
+	draw_colored_polygon(tile, color.darkened(0.35))
+	# A lighter cap over the upper half gives the tile a little depth.
+	var cap := PackedVector2Array()
+	for p in tile:
+		cap.append(Vector2(p.x, minf(p.y, c.y)))
+	draw_colored_polygon(cap, Color(color.r, color.g, color.b, 0.45))
+	if special:
+		draw_polyline(Palette.closed(_tile(c, s * 0.5 + 1.5)), GOLD, 3.0, true)
+	else:
+		draw_polyline(Palette.closed(tile), color.lightened(0.35), 1.5, true)
+	_draw_symbol(c, s * 0.34, GLYPH)
+	_draw_pips(Vector2(s * 0.5, s + 7.0 * _pip_scale()), color.lightened(0.2))
 
 
-func _octagon(c: Vector2, r: float) -> PackedVector2Array:
-	var k := r * 0.42
-	return PackedVector2Array([
-		c + Vector2(-r + k, -r), c + Vector2(r - k, -r), c + Vector2(r, -r + k), c + Vector2(r, r - k),
-		c + Vector2(r - k, r), c + Vector2(-r + k, r), c + Vector2(-r, r - k), c + Vector2(-r, -r + k),
-	])
+# Rounded square for weapons, circle for passives.
+func _tile(c: Vector2, r: float) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	if not is_weapon:
+		for k in 32:
+			points.append(c + Vector2.from_angle(TAU * float(k) / 32.0) * r)
+		return points
+	var corner := r * 0.32
+	var inner := r - corner
+	for q in 4:
+		var center := c + Vector2(inner if q == 0 or q == 3 else -inner, inner if q < 2 else -inner)
+		for k in 5:
+			points.append(center + Vector2.from_angle(PI * 0.5 * float(q) + PI * 0.125 * float(k)) * corner)
+	return points
 
 
 const SEG_WIDTH := 5.0
@@ -86,36 +101,43 @@ const SEG_HEIGHT := 8.0
 const SEG_GAP := 1.0
 
 
+# Pips are sized for a 44px icon and shrink with smaller ones so the row never overruns its tile.
+func _pip_scale() -> float:
+	return minf(1.0, icon_size / 44.0)
+
+
 # A row of interlocking right-pointing hexagons, one per stage, reading like a single arrow gauge.
 func _draw_pips(center: Vector2, color: Color) -> void:
+	var k := _pip_scale()
 	var count := Balance.MAX_STAGE + (1 if is_weapon else 0)
-	var total := SEG_POINT - SEG_GAP
+	var total := (SEG_POINT - SEG_GAP) * k
 	for i in count:
-		total += (SEG_SPECIAL_WIDTH if i + 1 == Balance.SPECIAL_STAGE else SEG_WIDTH) + SEG_GAP
+		total += ((SEG_SPECIAL_WIDTH if i + 1 == Balance.SPECIAL_STAGE else SEG_WIDTH) + SEG_GAP) * k
 	var x := center.x - total * 0.5
 	for i in count:
 		var stage := i + 1
-		var width := SEG_SPECIAL_WIDTH if stage == Balance.SPECIAL_STAGE else SEG_WIDTH
+		var width := (SEG_SPECIAL_WIDTH if stage == Balance.SPECIAL_STAGE else SEG_WIDTH) * k
 		var owned := stage <= level and not (preview and stage == level)
 		var next := preview and stage == level
-		var tint := Color(1.0, 0.85, 0.35) if stage == Balance.SPECIAL_STAGE else color
-		var seg := _arrow_hexagon(x, center.y, width)
+		var tint := GOLD if stage == Balance.SPECIAL_STAGE else color
+		var seg := _arrow_hexagon(x, center.y, width, k)
 		if owned:
 			draw_colored_polygon(seg, tint)
 		elif next:
 			draw_colored_polygon(seg, Color.WHITE)
 		else:
 			draw_polyline(Palette.closed(seg), Color(tint.r, tint.g, tint.b, 0.4), 1.0, true)
-		x += width + SEG_GAP
+		x += width + SEG_GAP * k
 
 
 # Notched on the left and pointed on the right, so each segment nests into the previous one.
-func _arrow_hexagon(left: float, mid_y: float, width: float) -> PackedVector2Array:
-	var top := mid_y - SEG_HEIGHT * 0.5
-	var bottom := mid_y + SEG_HEIGHT * 0.5
+func _arrow_hexagon(left: float, mid_y: float, width: float, k: float) -> PackedVector2Array:
+	var top := mid_y - SEG_HEIGHT * k * 0.5
+	var bottom := mid_y + SEG_HEIGHT * k * 0.5
+	var point := SEG_POINT * k
 	return PackedVector2Array([
-		Vector2(left, top), Vector2(left + width, top), Vector2(left + width + SEG_POINT, mid_y),
-		Vector2(left + width, bottom), Vector2(left, bottom), Vector2(left + SEG_POINT, mid_y),
+		Vector2(left, top), Vector2(left + width, top), Vector2(left + width + point, mid_y),
+		Vector2(left + width, bottom), Vector2(left, bottom), Vector2(left + point, mid_y),
 	])
 
 

@@ -28,7 +28,7 @@ func _process(delta: float) -> void:
 func _draw() -> void:
 	if camera == null:
 		return
-	var center := camera.get_screen_center_position() + Vector2(0, -110)
+	var center := camera.get_screen_center_position() + Vector2(0, -170)
 	var layers := [
 		[6, 150.0, 0.25, Palette.PLAYER, 0.9],
 		[3, 118.0, -0.4, Palette.ENEMIES[0], 0.8],

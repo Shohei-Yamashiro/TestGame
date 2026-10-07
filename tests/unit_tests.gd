@@ -152,7 +152,6 @@ func test_art_rule_friendly() -> void:
 	var friendly := [Palette.PLAYER, Palette.BULLET, Palette.BULLET_PIERCE, Palette.GEM, Palette.HOMING,
 		Palette.ORBIT, Palette.NOVA, Palette.LASER, Palette.WINGS, Palette.ELECTRIC]
 	friendly.append_array(Palette.GEM_TIERS)
-	friendly.append_array(ItemIconScript.COLORS.values())
 	for color in friendly:
 		check(color.b > color.r, "friendly color %s is not cool" % color)
 
@@ -482,11 +481,21 @@ func test_library_texts_fit_their_boxes() -> void:
 	layer.free()
 
 
-func test_hp_bar_grows_with_max_hp() -> void:
-	var panel = load("res://scripts/ui/status_panel.gd")
-	check(is_equal_approx(panel.bar_width(200), panel.bar_width(100) * 2.0), "the HP bar should be twice as long at double max HP")
-	var widest: int = Balance.PASSIVES["max_hp"]["max_hp"][Balance.MAX_STAGE]
-	check(panel.BAR_LEFT + panel.bar_width(widest) < 540.0, "the longest HP bar must stay clear of the centred timer")
+func test_hud_groups_status_left_and_score_right_of_timer() -> void:
+	var hud = (load("res://scenes/ui/hud.tscn") as PackedScene).instantiate()
+	root.add_child(hud)
+	var time_label: Label = hud.get_node("Root/TimeLabel")
+	var time_center := time_label.position.x + time_label.size.x * 0.5
+	check(is_equal_approx(time_center, 640.0), "the timer should sit at the centre of the screen")
+	var status: Control = hud.get_node("Root/Status")
+	check(status.position.x + status.BAR_RIGHT + status.BAR_SKEW <= hud.get_node("Root/WeaponIcons").position.x,
+		"the status bars must not run into the weapon icons")
+	var last_passive: Control = hud.get_node("Root/PassiveIcons").get_children().back()
+	var passives_right: float = hud.get_node("Root/PassiveIcons").position.x + last_passive.position.x + last_passive.icon_size
+	check(passives_right < time_label.position.x, "the passive icons must stay left of the timer")
+	for name in ["ScoreLabel", "KillsLabel"]:
+		check(hud.get_node("Root/" + name).position.x > time_label.position.x + time_label.size.x, "%s should sit right of the timer" % name)
+	hud.free()
 
 
 func test_choices_respect_slot_limits() -> void:
