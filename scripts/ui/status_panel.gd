@@ -10,7 +10,6 @@ const XP_HEIGHT := 6.0
 const HP_TOP := 42.0
 const HP_HEIGHT := 14.0
 const BAR_SKEW := 5.0
-const TICK_HP := 20
 
 @export var hp_color := Color(1, 0.3, 0.38)
 @export var hp_back := Color(0.3, 0.06, 0.1, 0.9)
@@ -58,8 +57,3 @@ func _draw() -> void:
 		if ratio <= 0.3:
 			fill = hp_color.lerp(Color.WHITE, 0.35 + 0.25 * sin(_time * 10.0))
 		_bar(HP_TOP, HP_HEIGHT, ratio, fill)
-	# The bar keeps its length; ticks every TICK_HP get denser as max HP grows.
-	var tick := Color(0.02, 0.03, 0.06, 0.8)
-	for value in range(TICK_HP, max_hp, TICK_HP):
-		var x := lerpf(BAR_LEFT, BAR_RIGHT, float(value) / float(max_hp))
-		draw_line(Vector2(x + BAR_SKEW, HP_TOP), Vector2(x, HP_TOP + HP_HEIGHT), tick, 2.0)

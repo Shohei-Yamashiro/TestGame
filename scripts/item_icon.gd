@@ -272,18 +272,19 @@ func _draw_symbol(c: Vector2, r: float, color: Color) -> void:
 			draw_circle(c, r * 0.13, color)
 		"move":
 			# A small shoe facing right under a large wing sprouting from its heel.
-			var foot := c + Vector2(0.3, 0.42) * r
+			var foot := c + Vector2(0.15, 0.32) * r
 			var shoe := PackedVector2Array()
 			for p: Vector2 in [Vector2(-0.45, -0.6), Vector2(0.0, -0.6), Vector2(0.06, -0.18), Vector2(0.45, -0.02),
 					Vector2(0.78, 0.14), Vector2(0.92, 0.32), Vector2(0.9, 0.55), Vector2(-0.58, 0.55), Vector2(-0.62, 0.12)]:
-				shoe.append(foot + p * r * 0.6)
+				shoe.append(foot + p * r * 0.85)
 			draw_colored_polygon(shoe, color)
 			# The wing sweeps up and back from the ankle; its trailing edge splits into three feather tips.
+			var ankle := c + Vector2(-0.2, -0.02) * r
 			var wing := PackedVector2Array()
 			for p: Vector2 in [Vector2(0.12, 0.18), Vector2(0.12, -0.3), Vector2(-0.12, -0.72), Vector2(-0.55, -0.95),
 					Vector2(-1.0, -0.98), Vector2(-0.72, -0.66), Vector2(-0.98, -0.54), Vector2(-0.62, -0.36),
 					Vector2(-0.84, -0.18), Vector2(-0.42, -0.08), Vector2(-0.5, 0.1), Vector2(-0.12, 0.12)]:
-				wing.append(c + p * r)
+				wing.append(ankle + (p - Vector2(0.12, 0.15)) * r * 0.68)
 			draw_colored_polygon(wing, Color(color.r, color.g, color.b, 0.9))
 		"magnet":
 			# A horseshoe magnet with a small gem being drawn in, centred on its full height.
@@ -337,15 +338,19 @@ func _draw_symbol(c: Vector2, r: float, color: Color) -> void:
 				core[i] += c
 			draw_colored_polygon(core, color)
 		"growth":
-			# Three XP crystals: a large one with two smaller ones beside it.
-			for gem: Array in [[Vector2(-0.3, 0.0), 0.8], [Vector2(0.5, -0.48), 0.4], [Vector2(0.55, 0.42), 0.36]]:
+			# XP gems scattered about, drawn like the in-game tiers: diamonds, a hexagon and an octagon.
+			for gem: Array in [[Vector2(0.28, 0.22), 8, 0.42], [Vector2(-0.48, -0.32), 6, 0.34], [Vector2(0.5, -0.58), 4, 0.24],
+					[Vector2(-0.55, 0.52), 4, 0.22], [Vector2(-0.02, -0.72), 4, 0.15], [Vector2(0.82, 0.3), 4, 0.14]]:
 				var g: Vector2 = c + (gem[0] as Vector2) * r
-				var h: float = gem[1] * r
-				var shape := PackedVector2Array([g + Vector2(0, -h), g + Vector2(h * 0.62, -h * 0.2), g + Vector2(0, h), g + Vector2(-h * 0.62, -h * 0.2)])
-				draw_colored_polygon(shape, Color(color.r, color.g, color.b, 0.6))
-				draw_polyline(Palette.closed(shape), color, 2.0, true)
-				draw_line(shape[1], shape[3], color, 1.5, true)
-				draw_line(shape[0], shape[2], Color(color.r, color.g, color.b, 0.7), 1.0, true)
+				var shape := Palette.regular_polygon(gem[1], gem[2] * r, 0.0)
+				for i in shape.size():
+					shape[i] += g
+				draw_colored_polygon(shape, Color(color.r, color.g, color.b, 0.35))
+				draw_polyline(Palette.closed(shape), color, 1.5, true)
+				var core := Palette.regular_polygon(4, gem[2] * r * 0.35, 0.0)
+				for i in core.size():
+					core[i] += g
+				draw_colored_polygon(core, color)
 		"knock":
 			# An enemy shot in from the upper right, rebounding off a barrier back toward the lower right.
 			var hit := c + Vector2(-r * 0.45, 0)
