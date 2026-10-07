@@ -5,7 +5,7 @@ const PLAYER_MAX_HP := 100
 const HURT_INTERVAL := 0.4
 const CONTACT_STACK := 3
 const BULLET_SPEED := 560.0
-const BASE_MAGNET := 180.0
+const BASE_MAGNET := 140.0
 
 # --- Round: fixed length, scored ---
 const TIME_LIMIT := 180.0
@@ -22,9 +22,9 @@ const MAX_PASSIVES := 4
 const MAX_STAGE := 5
 const SPECIAL_STAGE := 6
 const HEAL_AMOUNT := 35
-# Small repair kits dropped by enemies: the chance per kill grows with the enemy's XP. They stay until taken,
-# with a cap so a long detour-free run doesn't litter the arena.
-const HEAL_DROP_PER_XP := 0.18
+# Small repair kits dropped by enemies: the chance per kill grows with the enemy's XP. Like gems they stay until taken,
+# with a cap so they never litter the arena.
+const HEAL_DROP_PER_XP := 0.01
 const HEAL_MAX_ON_FIELD := 30
 const HEAL_PICKUP := 8
 # Points for a kit picked up at full HP.
@@ -52,8 +52,8 @@ const PASSIVES := {
 	},
 	"magnet": {
 		"name": "回収範囲",
-		"magnet": [BASE_MAGNET, 215.0, 255.0, 300.0, 350.0, 420.0],
-		"stats": [["magnet", "経験値を引き寄せる範囲が拡大", "回収半径"]],
+		"magnet": [BASE_MAGNET, 185.0, 230.0, 280.0, 340.0, 420.0],
+		"stats": [["magnet", "経験値と回復アイテムを引き寄せる範囲が拡大", "回収半径"]],
 	},
 	"max_hp": {
 		"name": "最大HP",
@@ -353,7 +353,7 @@ const ENEMY_SPEED_RAMP := 0.4
 const ENEMY_MAX_SPEED := 250.0
 const ENEMY_CAP := 220
 # Scales every contact and shot hit; tuned together with heal drops so HP swings rather than drains.
-const ENEMY_DAMAGE_MULT := 0.75
+const ENEMY_DAMAGE_MULT := 0.85
 const KNOCKBACK := 14.0
 
 

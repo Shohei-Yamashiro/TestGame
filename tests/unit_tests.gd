@@ -384,6 +384,16 @@ func test_heal_drops_are_capped_and_heal_on_pickup() -> void:
 	game.free()
 
 
+func test_magnet_pulls_heal_kits() -> void:
+	var game = _new_game()
+	var at: Vector2 = game.player.global_position + Vector2(game.player.magnet_radius * 0.8, 0)
+	game.drop_heal(at)
+	var kit = game.get_tree().get_nodes_in_group("heals")[0]
+	kit._physics_process(0.1)
+	check(kit.global_position.x < at.x, "a kit inside the magnet radius should drift toward the player")
+	game.free()
+
+
 func test_heal_kits_stay_until_taken() -> void:
 	var game = _new_game()
 	game.drop_heal(Vector2(2000, 2000))

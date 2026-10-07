@@ -1,10 +1,11 @@
 extends Node2D
 
-# A small repair kit dropped by enemies: walk over it to recover a little HP. Like gems it stays until taken,
-# but the magnet does not pull it in, so grabbing one means a short detour.
+# A small repair kit dropped by enemies: walk over it to recover a little HP. Like gems it stays until taken
+# and the magnet pulls it in.
 
 const Palette := preload("res://scripts/palette.gd")
 const Balance := preload("res://scripts/balance.gd")
+const GemScript := preload("res://scripts/gem.gd")
 
 signal collected(amount: int)
 
@@ -12,6 +13,8 @@ const PICKUP_RADIUS := 22.0
 const SIZE := 7.0
 
 var _age := 0.0
+var _pull_speed := 0.0
+var _attracted := false
 var _player: Node2D
 
 
@@ -26,7 +29,14 @@ func _physics_process(delta: float) -> void:
 	queue_redraw()
 	if _player == null or not bool(_player.get("alive")):
 		return
-	if global_position.distance_squared_to(_player.global_position) <= PICKUP_RADIUS * PICKUP_RADIUS:
+	var dist := global_position.distance_to(_player.global_position)
+	if dist <= float(_player.get("magnet_radius")):
+		_attracted = true
+	if _attracted:
+		_pull_speed = minf(GemScript.MAGNET_MAX_SPEED, _pull_speed + GemScript.MAGNET_ACCEL * delta)
+		global_position += (_player.global_position - global_position).normalized() * minf(dist, _pull_speed * delta)
+		dist = global_position.distance_to(_player.global_position)
+	if dist <= PICKUP_RADIUS:
 		var fx := get_tree().get_first_node_in_group("fx")
 		if fx:
 			fx.ring(global_position, Palette.hdr(Palette.HEAL, 1.8), 28.0, 0.3)
