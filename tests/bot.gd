@@ -15,6 +15,12 @@ var peak_process_ms := 0.0
 var peak_enemies := 0
 var first_hurt := -1.0
 var last_hp := 100
+var hits := 0
+var damage_taken := 0
+# How surrounded the player is: of 8 directions, how many hold an enemy within COVER_RANGE, averaged over time.
+const COVER_RANGE := 260.0
+var cover_sum := 0.0
+var cover_samples := 0
 
 
 func _initialize() -> void:
@@ -34,6 +40,9 @@ func _process(_delta: float) -> bool:
 	frame += 1
 	if frame == 2:
 		game._start_game()
+		game.player.hurt.connect(func(amount: int):
+			hits += 1
+			damage_taken += amount)
 		return false
 	if frame < 3:
 		return false
@@ -72,6 +81,15 @@ func _track() -> void:
 	if hp < last_hp and first_hurt < 0.0:
 		first_hurt = game.elapsed
 	last_hp = hp
+	if frame % 30 == 0 and game.phase == game.Phase.PLAYING:
+		var me: Vector2 = game.player.global_position
+		var sectors := {}
+		for node in game.get_tree().get_nodes_in_group("enemies"):
+			var d: Vector2 = node.global_position - me
+			if d.length_squared() < COVER_RANGE * COVER_RANGE:
+				sectors[int(floor(fposmod(d.angle(), TAU) / (TAU / 8.0)))] = true
+		cover_sum += sectors.size()
+		cover_samples += 1
 
 
 func _choose() -> void:
@@ -167,8 +185,9 @@ func _report() -> void:
 
 func _final() -> void:
 	var outcome := "CLEARED" if game.cleared else ("DIED" if game.phase == game.Phase.GAME_OVER else "RUNNING")
-	print("RESULT policy=%s %s at t=%.1fs score=%d (kill %d overflow %d) hp=%d level=%d kills=%d %s first_hurt=%.1fs" % [
-		policy, outcome, game.elapsed, game.score, game.kill_score, game.overflow_score, game.player.hp, game.level, game.kills, _stages(), first_hurt])
+	print("RESULT policy=%s %s at t=%.1fs score=%d (kill %d overflow %d) hp=%d level=%d kills=%d %s first_hurt=%.1fs hits=%d damage=%d heals=%d cover=%.2f" % [
+		policy, outcome, game.elapsed, game.score, game.kill_score, game.overflow_score, game.player.hp, game.level, game.kills, _stages(), first_hurt,
+		hits, damage_taken, int(game.get("heals_picked") if game.get("heals_picked") != null else 0), cover_sum / maxf(1.0, cover_samples)])
 	print("PERF peak_enemies=%d avg_frame=%.2fms avg_frame_100plus=%.2fms peak_physics=%.2fms peak_process=%.2fms (scripts only, headless)" % [
 		peak_enemies, sum_frame_ms / maxf(1.0, frames_tracked), heavy_frame_ms / maxf(1.0, heavy_frames), peak_physics_ms, peak_process_ms])
 	print("LEVELS " + ", ".join(level_log))

@@ -32,9 +32,13 @@ const ENEMIES: Array[Color] = [
 	Color(1.0, 0.2, 0.35),
 	Color(1.0, 0.95, 0.75),
 	Color(1.0, 0.35, 0.6),
+	# Heavy variants: the lancer and the battery.
+	Color(1.0, 0.6, 0.45),
+	Color(1.0, 0.15, 0.5),
 ]
 const ENEMY_SHOT := Color(1.0, 0.35, 0.45)
 const SLOW := Color(0.6, 0.75, 1.0)
+const HEAL := Color(0.35, 1.0, 0.7)
 
 
 # Values above 1.0 exceed the glow threshold and bloom under the HDR 2D environment.

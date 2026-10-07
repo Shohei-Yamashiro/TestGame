@@ -8,7 +8,7 @@ const HIT_RADIUS := 6.0
 var direction := Vector2.RIGHT
 # Once reflected the shot belongs to the player: it hurts enemies instead.
 var reflected := false
-var _damage := Balance.SHOT_DAMAGE
+var damage := Balance.SHOT_DAMAGE
 var _speed := Balance.SHOT_SPEED
 var _age := 0.0
 var _player: Node2D
@@ -22,12 +22,12 @@ func _ready() -> void:
 	_game = get_tree().get_first_node_in_group("game")
 
 
-func reflect(normal: Vector2, damage: int) -> void:
+func reflect(normal: Vector2, new_damage: int) -> void:
 	reflected = true
 	remove_from_group("enemy_shots")
 	direction = (direction - 2.0 * direction.dot(normal) * normal).normalized()
 	_speed *= Balance.REFLECT_SPEED
-	_damage = damage
+	damage = new_damage
 	_age = 0.0
 	queue_redraw()
 
@@ -53,7 +53,7 @@ func _physics_process(delta: float) -> void:
 		return
 	var reach: float = HIT_RADIUS + float(_player.get("hurt_radius"))
 	if global_position.distance_squared_to(_player.global_position) <= reach * reach:
-		_player.call("take_hit", _damage)
+		_player.call("take_hit", damage)
 		var fx := get_tree().get_first_node_in_group("fx")
 		if fx:
 			fx.burst(global_position, Palette.hdr(Palette.ENEMY_SHOT, 1.3), 6, 160.0)
@@ -66,7 +66,7 @@ func _hit_enemies() -> void:
 			continue
 		var reach: float = HIT_RADIUS + float(node.radius)
 		if global_position.distance_squared_to(node.global_position) <= reach * reach:
-			node.take_damage(_damage, direction)
+			node.take_damage(damage, direction)
 			var fx := get_tree().get_first_node_in_group("fx")
 			if fx:
 				fx.hit_sparks(global_position, direction, Palette.hdr(Palette.ORBIT, 1.4))

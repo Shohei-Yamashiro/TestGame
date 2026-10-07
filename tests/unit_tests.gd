@@ -307,6 +307,80 @@ func test_spawner_caps_shooters() -> void:
 	game.free()
 
 
+func test_spawner_caps_every_shooting_kind() -> void:
+	var game = _new_game()
+	var kinds := ["turret", "shooter", "battery"]
+	for i in Balance.SHOOTER_MAX + 3:
+		game.spawner.spawn_enemy(kinds[i % kinds.size()], Vector2(500, float(i) * 30.0))
+	var shooters: int = game.get_tree().get_nodes_in_group("shooters").size()
+	check(shooters == Balance.SHOOTER_MAX, "turrets and batteries should share the shooter cap, got %d" % shooters)
+	game.free()
+
+
+func test_enemy_kinds_have_light_and_heavy_variants() -> void:
+	for group in [["dart", "dasher", "lancer"], ["turret", "shooter", "battery"]]:
+		for i in range(1, group.size()):
+			var lighter: Dictionary = Balance.ENEMY_KINDS[group[i - 1]]
+			var heavier: Dictionary = Balance.ENEMY_KINDS[group[i]]
+			check(float(heavier.hp) > float(lighter.hp), "%s should be tougher than %s" % [group[i], group[i - 1]])
+			check(int(heavier.xp) > int(lighter.xp), "%s should be worth more than %s" % [group[i], group[i - 1]])
+
+
+func test_packs_favour_the_players_heading() -> void:
+	var game = _new_game()
+	seed(3)
+	game.player.velocity = Vector2(300, 0)
+	var center: Vector2 = game.camera.view_rect().get_center()
+	var ahead := 0
+	var behind := 0
+	for i in 60:
+		game.spawner.spawn_pack()
+		for enemy in game.get_tree().get_nodes_in_group("enemies"):
+			if enemy.global_position.x > center.x + 100.0:
+				ahead += 1
+			elif enemy.global_position.x < center.x - 100.0:
+				behind += 1
+			enemy.free()
+	check(ahead > behind * 2, "packs should mostly arrive ahead of a moving player (ahead %d, behind %d)" % [ahead, behind])
+	game.free()
+
+
+func test_flankers_swing_wide_only_from_afar() -> void:
+	var game = _new_game()
+	game.player.velocity = Vector2.ZERO
+	game.spawner.spawn_enemy("tri", Vector2(900, 0))
+	var enemy = game.get_tree().get_nodes_in_group("enemies")[0]
+	enemy._flank = Balance.FLANK_ANGLE
+	var near: Vector2 = enemy.chase_direction(Vector2(Balance.FLANK_NEAR * 0.5, 0))
+	var far: Vector2 = enemy.chase_direction(Vector2(Balance.FLANK_FAR * 2.0, 0))
+	check(absf(near.angle()) < 0.01, "close enemies should head straight in, got %.2f" % near.angle())
+	check(is_equal_approx(far.angle(), Balance.FLANK_ANGLE), "distant flankers should swing wide, got %.2f" % far.angle())
+	game.free()
+
+
+func test_heal_drops_are_capped_and_heal_on_pickup() -> void:
+	var game = _new_game()
+	for i in Balance.HEAL_MAX_ON_FIELD + 2:
+		game.drop_heal(Vector2(400, float(i) * 50.0))
+	var kits: Array = game.get_tree().get_nodes_in_group("heals")
+	check(kits.size() == Balance.HEAL_MAX_ON_FIELD, "heal kits on the field should stop at %d, got %d" % [Balance.HEAL_MAX_ON_FIELD, kits.size()])
+	game.player.hp = 10
+	kits[0].global_position = game.player.global_position
+	kits[0]._physics_process(0.016)
+	check(game.heals_picked == 1, "walking over a kit should count as a pickup")
+	check(game.player.hp == 10 + Balance.HEAL_PICKUP, "a kit should restore %d HP, got %d" % [Balance.HEAL_PICKUP, game.player.hp])
+	game.free()
+
+
+func test_heal_kits_expire() -> void:
+	var game = _new_game()
+	game.drop_heal(Vector2(2000, 2000))
+	var kit = game.get_tree().get_nodes_in_group("heals")[0]
+	kit._physics_process(Balance.HEAL_LIFETIME + 0.1)
+	check(kit.is_queued_for_deletion(), "an untouched kit should vanish after its lifetime")
+	game.free()
+
+
 func test_spawner_respects_enemy_cap() -> void:
 	var game = _new_game()
 	for i in Balance.ENEMY_CAP + 20:

@@ -5,8 +5,10 @@ extends RefCounted
 const Balance := preload("res://scripts/balance.gd")
 const EnemyScript := preload("res://scripts/enemy.gd")
 
-const LEASH := 1000.0
+const LEASH := 850.0
 const EDGE_MARGIN := 40.0
+const PACK_AHEAD := 0.4
+const PACK_SIDE := 0.3
 # Packs of enemies with a special behaviour stay small so they never arrive as a wall.
 const BEHAVIOR_PACK_MAX := 3
 
@@ -35,7 +37,7 @@ func update(delta: float) -> void:
 func spawn_enemy(kind: String, at: Vector2) -> void:
 	if game._enemy_count() >= Balance.ENEMY_CAP:
 		return
-	if kind == "shooter" and game.get_tree().get_nodes_in_group("shooters").size() >= Balance.SHOOTER_MAX:
+	if Balance.ENEMY_KINDS[kind].get("behavior", "") == "shoot" and game.get_tree().get_nodes_in_group("shooters").size() >= Balance.SHOOTER_MAX:
 		kind = "penta"
 	var enemy := EnemyScript.new()
 	enemy.setup(kind, game.elapsed)
@@ -44,9 +46,17 @@ func spawn_enemy(kind: String, at: Vector2) -> void:
 	enemy.global_position = at
 
 
-# A small clump entering from one point on the screen edge.
+# A small clump entering from one point on the screen edge, mostly ahead of or beside the player
+# so a moving player keeps running into fresh enemies instead of leaving them all behind.
 func spawn_pack() -> void:
+	var heading: Vector2 = game.player.velocity
 	var origin := edge_spawn_position()
+	if heading.length_squared() >= 1.0:
+		var roll := randf()
+		if roll < PACK_AHEAD:
+			origin = edge_position_toward(heading)
+		elif roll < PACK_AHEAD + PACK_SIDE:
+			origin = edge_position_toward(heading.orthogonal() * (1.0 if randf() < 0.5 else -1.0))
 	var kind := Balance.pick_enemy_kind(game.elapsed)
 	var count := Balance.trickle_pack(game.elapsed)
 	if Balance.ENEMY_KINDS[kind].has("behavior"):
