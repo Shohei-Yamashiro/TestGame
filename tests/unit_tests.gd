@@ -307,6 +307,102 @@ func test_spawner_caps_shooters() -> void:
 	game.free()
 
 
+func test_spawner_caps_every_shooting_kind() -> void:
+	var game = _new_game()
+	var kinds := ["turret", "shooter", "battery"]
+	for i in Balance.SHOOTER_MAX + 3:
+		game.spawner.spawn_enemy(kinds[i % kinds.size()], Vector2(500, float(i) * 30.0))
+	var shooters: int = game.get_tree().get_nodes_in_group("shooters").size()
+	check(shooters == Balance.SHOOTER_MAX, "turrets and batteries should share the shooter cap, got %d" % shooters)
+	game.free()
+
+
+func test_enemy_kinds_have_light_and_heavy_variants() -> void:
+	for group in [["dart", "dasher", "lancer"], ["turret", "shooter", "battery"]]:
+		for i in range(1, group.size()):
+			var lighter: Dictionary = Balance.ENEMY_KINDS[group[i - 1]]
+			var heavier: Dictionary = Balance.ENEMY_KINDS[group[i]]
+			check(float(heavier.hp) > float(lighter.hp), "%s should be tougher than %s" % [group[i], group[i - 1]])
+			check(int(heavier.xp) > int(lighter.xp), "%s should be worth more than %s" % [group[i], group[i - 1]])
+
+
+func test_sparse_edge_fills_the_emptiest_sector() -> void:
+	var game = _new_game()
+	var center: Vector2 = game.player.global_position
+	for i in 20:
+		var counts: Array[int] = [5, 5, 5, 0, 5, 5, 5, 5]
+		var at: Vector2 = game.spawner.sparse_edge_position(counts)
+		check(game.spawner.sector_of(at - center) == 3, "arrival should land in the empty sector, got %d" % game.spawner.sector_of(at - center))
+		check(counts[3] == 1, "the chosen sector should count the arrival")
+	game.free()
+
+
+func test_leashed_enemies_return_where_the_horde_is_thin() -> void:
+	var game = _new_game()
+	var center: Vector2 = game.player.global_position
+	for s in 7:
+		game.spawner.spawn_enemy("tri", center + Vector2.from_angle((float(s) + 0.5) * TAU / 8.0) * 200.0)
+	game.spawner.spawn_enemy("tri", center + Vector2(game.spawner.LEASH + 300.0, 0))
+	var enemies: Array = game.get_tree().get_nodes_in_group("enemies")
+	var straggler = enemies[enemies.size() - 1]
+	game.spawner.leash_enemies()
+	var offset: Vector2 = straggler.global_position - center
+	check(offset.length() < game.spawner.LEASH, "the straggler should be pulled back within the leash")
+	check(game.spawner.sector_of(offset) == 7, "the straggler should reappear in the only empty sector, got %d" % game.spawner.sector_of(offset))
+	game.free()
+
+
+func test_flankers_swing_wide_only_from_afar() -> void:
+	var game = _new_game()
+	game.player.velocity = Vector2.ZERO
+	game.spawner.spawn_enemy("tri", Vector2(900, 0))
+	var enemy = game.get_tree().get_nodes_in_group("enemies")[0]
+	enemy._flank = Balance.FLANK_ANGLE
+	var near: Vector2 = enemy.chase_direction(Vector2(Balance.FLANK_NEAR * 0.5, 0))
+	var far: Vector2 = enemy.chase_direction(Vector2(Balance.FLANK_FAR * 2.0, 0))
+	check(absf(near.angle()) < 0.01, "close enemies should head straight in, got %.2f" % near.angle())
+	check(is_equal_approx(far.angle(), Balance.FLANK_ANGLE), "distant flankers should swing wide, got %.2f" % far.angle())
+	game.free()
+
+
+func test_heal_drops_are_capped_and_heal_on_pickup() -> void:
+	var game = _new_game()
+	for i in Balance.HEAL_MAX_ON_FIELD + 2:
+		game.drop_heal(Vector2(400, float(i) * 50.0))
+	var kits: Array = game.get_tree().get_nodes_in_group("heals")
+	check(kits.size() == Balance.HEAL_MAX_ON_FIELD, "heal kits on the field should stop at %d, got %d" % [Balance.HEAL_MAX_ON_FIELD, kits.size()])
+	game.player.hp = 10
+	kits[0].global_position = game.player.global_position
+	kits[0]._physics_process(0.016)
+	check(game.heals_picked == 1, "walking over a kit should count as a pickup")
+	check(game.player.hp == 10 + Balance.HEAL_PICKUP, "a kit should restore %d HP, got %d" % [Balance.HEAL_PICKUP, game.player.hp])
+	game.player.hp = game.player.max_hp
+	var before: int = game.score
+	kits[1].global_position = game.player.global_position
+	kits[1]._physics_process(0.016)
+	check(game.score == before + Balance.HEAL_SCORE, "a kit at full HP should turn into %d points" % Balance.HEAL_SCORE)
+	game.free()
+
+
+func test_magnet_pulls_heal_kits() -> void:
+	var game = _new_game()
+	var at: Vector2 = game.player.global_position + Vector2(game.player.magnet_radius * 0.8, 0)
+	game.drop_heal(at)
+	var kit = game.get_tree().get_nodes_in_group("heals")[0]
+	kit._physics_process(0.1)
+	check(kit.global_position.x < at.x, "a kit inside the magnet radius should drift toward the player")
+	game.free()
+
+
+func test_heal_kits_stay_until_taken() -> void:
+	var game = _new_game()
+	game.drop_heal(Vector2(2000, 2000))
+	var kit = game.get_tree().get_nodes_in_group("heals")[0]
+	kit._physics_process(600.0)
+	check(not kit.is_queued_for_deletion(), "an untouched kit should stay like a gem")
+	game.free()
+
+
 func test_spawner_respects_enemy_cap() -> void:
 	var game = _new_game()
 	for i in Balance.ENEMY_CAP + 20:

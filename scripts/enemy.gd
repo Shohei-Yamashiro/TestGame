@@ -35,6 +35,17 @@ var _dash_length := 0.0
 var _dash_start := Vector2.ZERO
 var _slow_time := 0.0
 var _slow_factor := 1.0
+# Per-kind attack tuning, read from the kind's table entry with the shared constants as defaults.
+var dash_trigger := Balance.DASH_TRIGGER
+var dash_windup := Balance.DASH_WINDUP
+var dash_speed := Balance.DASH_SPEED
+var dash_overshoot := Balance.DASH_OVERSHOOT
+var dash_cooldown := Balance.DASH_COOLDOWN
+var dash_lane := Balance.DASH_LANE_WIDTH
+var shot_interval := Balance.SHOT_INTERVAL
+var shot_damage := Balance.SHOT_DAMAGE
+var shot_count := 1
+var _flank := 0.0
 var _burn_time := 0.0
 var _burn_tick := 0.0
 var _burn_damage := 0
@@ -52,10 +63,21 @@ func setup(enemy_kind: String, t: float) -> void:
 	radius = data["radius"]
 	hp = int(round(Balance.ENEMY_BASE_HP * float(data["hp"]) * Balance.enemy_hp_scale(t)))
 	speed = Balance.enemy_speed(t) * float(data["speed"])
-	contact_damage = int(data["damage"]) + int(t / 60.0) * 2
+	contact_damage = int(round(float(int(data["damage"]) + int(t / 60.0) * 2) * Balance.ENEMY_DAMAGE_MULT))
 	xp_value = data["xp"]
 	points = data["score"]
 	color = Palette.ENEMIES[data["color"]]
+	dash_trigger = data.get("dash_trigger", Balance.DASH_TRIGGER)
+	dash_windup = data.get("dash_windup", Balance.DASH_WINDUP)
+	dash_speed = data.get("dash_speed", Balance.DASH_SPEED)
+	dash_overshoot = data.get("dash_overshoot", Balance.DASH_OVERSHOOT)
+	dash_cooldown = data.get("dash_cooldown", Balance.DASH_COOLDOWN)
+	dash_lane = data.get("dash_lane", Balance.DASH_LANE_WIDTH)
+	shot_interval = data.get("shot_interval", Balance.SHOT_INTERVAL)
+	shot_damage = int(round(float(data.get("shot_damage", Balance.SHOT_DAMAGE)) * Balance.ENEMY_DAMAGE_MULT))
+	shot_count = data.get("shot_count", 1)
+	if randf() < Balance.FLANK_CHANCE:
+		_flank = randf_range(-Balance.FLANK_ANGLE, Balance.FLANK_ANGLE)
 
 
 func _ready() -> void:
@@ -133,32 +155,39 @@ func _physics_process(delta: float) -> void:
 		"shoot":
 			_update_shoot(to_player)
 	if _state == State.CHASE and to_player.length_squared() >= 1.0:
-		global_position += to_player.normalized() * speed * delta * pace
+		global_position += chase_direction(to_player) * speed * delta * pace
+
+
+# Heads for where the player is about to be, swinging wide while still far off; straight in once close.
+func chase_direction(to_player: Vector2) -> Vector2:
+	var dist := to_player.length()
+	var swing := _flank * clampf((dist - Balance.FLANK_NEAR) / (Balance.FLANK_FAR - Balance.FLANK_NEAR), 0.0, 1.0)
+	return (to_player / maxf(dist, 0.001)).rotated(swing)
 
 
 func _update_dash(delta: float, to_player: Vector2, pace: float) -> void:
 	match _state:
 		State.CHASE:
-			if _action_cd <= 0.0 and to_player.length() < Balance.DASH_TRIGGER:
+			if _action_cd <= 0.0 and to_player.length() < dash_trigger:
 				_state = State.WINDUP
 				_state_time = 0.0
 				# The lane is fixed the moment it appears (aimed with a little lead), so the band never lies.
 				var lead := _player.global_position + Vector2(_player.get("velocity")) * Balance.DASH_LEAD
 				var aim := lead - global_position
 				_dash_dir = aim.normalized()
-				_dash_length = aim.length() + Balance.DASH_OVERSHOOT
+				_dash_length = aim.length() + dash_overshoot
 				_dash_start = global_position
 		State.WINDUP:
-			if _state_time >= Balance.DASH_WINDUP:
+			if _state_time >= dash_windup:
 				_state = State.DASH
 				_state_time = 0.0
 				# Crowd separation may have nudged it; launch from where the band starts.
 				global_position = _dash_start
 		State.DASH:
-			global_position += _dash_dir * Balance.DASH_SPEED * delta * pace
+			global_position += _dash_dir * dash_speed * delta * pace
 			if global_position.distance_to(_dash_start) >= _dash_length:
 				_state = State.CHASE
-				_action_cd = Balance.DASH_COOLDOWN
+				_action_cd = dash_cooldown
 
 
 func _update_shoot(to_player: Vector2) -> void:
@@ -171,14 +200,18 @@ func _update_shoot(to_player: Vector2) -> void:
 			if _state_time >= Balance.SHOT_WINDUP:
 				_fire(to_player.normalized())
 				_state = State.CHASE
-				_action_cd = Balance.SHOT_INTERVAL
+				_action_cd = shot_interval
 
 
+# Several shots spread evenly across a fan centred on the player.
 func _fire(dir: Vector2) -> void:
-	var shot := EnemyShotScript.new()
-	shot.direction = dir
-	get_parent().add_child(shot)
-	shot.global_position = global_position + dir * radius
+	for i in shot_count:
+		var offset := (float(i) - float(shot_count - 1) * 0.5) * Balance.SHOT_FAN
+		var shot := EnemyShotScript.new()
+		shot.direction = dir.rotated(offset)
+		shot.damage = shot_damage
+		get_parent().add_child(shot)
+		shot.global_position = global_position + shot.direction * radius
 
 
 func take_damage(amount: int, from_dir: Vector2, knockback: float = Balance.KNOCKBACK) -> void:
@@ -219,7 +252,7 @@ func _draw_lane(charge: float) -> void:
 	# Undo the body's spin so the band is laid out in world directions.
 	draw_set_transform(Vector2.ZERO, -rotation, Vector2.ONE)
 	var start := _dash_start - global_position
-	var half := _dash_dir.orthogonal() * radius * Balance.DASH_LANE_WIDTH * 0.5
+	var half := _dash_dir.orthogonal() * radius * dash_lane * 0.5
 	var end := start + _dash_dir * _dash_length
 	var band := PackedVector2Array([start + half, end + half, end - half, start - half])
 	var fade := 1.0
@@ -261,7 +294,7 @@ func _draw() -> void:
 	var tint := color
 	var charge := 0.0
 	if _state == State.WINDUP:
-		var windup := Balance.DASH_WINDUP if behavior == "dash" else Balance.SHOT_WINDUP
+		var windup := dash_windup if behavior == "dash" else Balance.SHOT_WINDUP
 		charge = clampf(_state_time / windup, 0.0, 1.0)
 		tint = color.lerp(Color.WHITE, 0.5 * charge)
 	if behavior == "dash" and _state != State.CHASE:

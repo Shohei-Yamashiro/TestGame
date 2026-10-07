@@ -15,6 +15,12 @@ var peak_process_ms := 0.0
 var peak_enemies := 0
 var first_hurt := -1.0
 var last_hp := 100
+var hits := 0
+var damage_taken := 0
+# How surrounded the player is: of 8 directions, how many hold an enemy within COVER_RANGE, averaged over time.
+const COVER_RANGE := 260.0
+var cover_sum := 0.0
+var cover_samples := 0
 
 
 func _initialize() -> void:
@@ -34,6 +40,9 @@ func _process(_delta: float) -> bool:
 	frame += 1
 	if frame == 2:
 		game._start_game()
+		game.player.hurt.connect(func(amount: int):
+			hits += 1
+			damage_taken += amount)
 		return false
 	if frame < 3:
 		return false
@@ -72,6 +81,15 @@ func _track() -> void:
 	if hp < last_hp and first_hurt < 0.0:
 		first_hurt = game.elapsed
 	last_hp = hp
+	if frame % 30 == 0 and game.phase == game.Phase.PLAYING:
+		var me: Vector2 = game.player.global_position
+		var sectors := {}
+		for node in game.get_tree().get_nodes_in_group("enemies"):
+			var d: Vector2 = node.global_position - me
+			if d.length_squared() < COVER_RANGE * COVER_RANGE:
+				sectors[int(floor(fposmod(d.angle(), TAU) / (TAU / 8.0)))] = true
+		cover_sum += sectors.size()
+		cover_samples += 1
 
 
 func _choose() -> void:
@@ -109,8 +127,11 @@ func _steer() -> void:
 				var dist := d.length()
 				if dist < 170.0 and dist > 0.1:
 					flee += d / dist * (170.0 - dist) / 170.0
+			var kit := _wanted_heal(me, 260.0)
 			if flee.length() > 0.3:
 				_casual_dir = flee.normalized()
+			elif kit != null:
+				_casual_dir = (kit.global_position - me).normalized()
 			elif _casual_dir == Vector2.ZERO or randf() < 0.1:
 				_casual_dir = Vector2.from_angle(randf() * TAU)
 		dir = _casual_dir
@@ -129,7 +150,10 @@ func _steer() -> void:
 				if gd < best_dist:
 					best_dist = gd
 					best_gem = node
-		if best_gem != null:
+		var kit := _wanted_heal(me, 450.0)
+		if kit != null:
+			dir += (kit.global_position - me).normalized() * 2.0
+		elif best_gem != null:
 			dir += (best_gem.global_position - me).normalized() * 1.2
 		# Gentle orbit so the bot doesn't sit still in a calm moment.
 		dir += Vector2.from_angle(game.elapsed * 0.4) * 0.3
@@ -137,6 +161,20 @@ func _steer() -> void:
 	_press(KEY_A, dir.x < -0.35)
 	_press(KEY_S, dir.y > 0.35)
 	_press(KEY_W, dir.y < -0.35)
+
+
+# Once hurt, a player goes out of their way for a nearby heal kit.
+func _wanted_heal(me: Vector2, reach: float) -> Node2D:
+	if game.player.hp > game.player.max_hp * 0.7:
+		return null
+	var best: Node2D = null
+	var best_dist := reach
+	for node in game.get_tree().get_nodes_in_group("heals"):
+		var d: float = me.distance_to(node.global_position)
+		if d < best_dist:
+			best_dist = d
+			best = node
+	return best
 
 
 func _press(key: Key, down: bool) -> void:
@@ -167,8 +205,9 @@ func _report() -> void:
 
 func _final() -> void:
 	var outcome := "CLEARED" if game.cleared else ("DIED" if game.phase == game.Phase.GAME_OVER else "RUNNING")
-	print("RESULT policy=%s %s at t=%.1fs score=%d (kill %d overflow %d) hp=%d level=%d kills=%d %s first_hurt=%.1fs" % [
-		policy, outcome, game.elapsed, game.score, game.kill_score, game.overflow_score, game.player.hp, game.level, game.kills, _stages(), first_hurt])
+	print("RESULT policy=%s %s at t=%.1fs score=%d (kill %d overflow %d) hp=%d level=%d kills=%d %s first_hurt=%.1fs hits=%d damage=%d heals=%d cover=%.2f" % [
+		policy, outcome, game.elapsed, game.score, game.kill_score, game.overflow_score, game.player.hp, game.level, game.kills, _stages(), first_hurt,
+		hits, damage_taken, int(game.get("heals_picked") if game.get("heals_picked") != null else 0), cover_sum / maxf(1.0, cover_samples)])
 	print("PERF peak_enemies=%d avg_frame=%.2fms avg_frame_100plus=%.2fms peak_physics=%.2fms peak_process=%.2fms (scripts only, headless)" % [
 		peak_enemies, sum_frame_ms / maxf(1.0, frames_tracked), heavy_frame_ms / maxf(1.0, heavy_frames), peak_physics_ms, peak_process_ms])
 	print("LEVELS " + ", ".join(level_log))

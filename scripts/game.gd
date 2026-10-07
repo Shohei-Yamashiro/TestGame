@@ -2,6 +2,7 @@ extends Node2D
 
 const PlayerScript := preload("res://scripts/player.gd")
 const GemScript := preload("res://scripts/gem.gd")
+const HealScript := preload("res://scripts/heal_pickup.gd")
 const BackgroundScript := preload("res://scripts/background.gd")
 const FxScript := preload("res://scripts/fx.gd")
 const TitleDecoScript := preload("res://scripts/title_deco.gd")
@@ -57,6 +58,8 @@ var scores := ScoreStore.new()
 var spawner := Spawner.new(self)
 var elapsed := 0.0
 var kills := 0
+var heals_picked := 0
+var heal_score := 0
 var level := 1
 var xp := 0
 var xp_to_next := Balance.xp_to_next(1)
@@ -304,6 +307,27 @@ func _on_enemy_died(at: Vector2, value: int, points: int) -> void:
 	gem.collected.connect(_on_gem_collected)
 	world.add_child(gem)
 	gem.global_position = at
+	if randf() < float(value) * Balance.HEAL_DROP_PER_XP:
+		drop_heal(at)
+
+
+func drop_heal(at: Vector2) -> void:
+	if get_tree().get_nodes_in_group("heals").size() >= Balance.HEAL_MAX_ON_FIELD:
+		return
+	var kit := HealScript.new()
+	kit.collected.connect(_on_heal_collected)
+	world.add_child(kit)
+	kit.global_position = at
+
+
+# At full HP a kit is banked as points instead, so picking one up is never wasted.
+func _on_heal_collected(amount: int) -> void:
+	heals_picked += 1
+	if player.hp >= player.max_hp:
+		score += Balance.HEAL_SCORE
+		heal_score += Balance.HEAL_SCORE
+		return
+	player.heal(amount)
 
 
 func _on_player_hurt(_amount: int) -> void:
@@ -358,6 +382,8 @@ func _finish(survived: bool) -> void:
 	var lines: Array[String] = ["撃破 %d体  %d" % [kills, kill_score]]
 	if overflow_score > 0:
 		lines.append("強化ボーナス  %d" % overflow_score)
+	if heal_score > 0:
+		lines.append("回復ボーナス  %d" % heal_score)
 	if survived:
 		lines.append("クリア  %d    残りHP  %d" % [clear_bonus, hp_bonus])
 	else:

@@ -2,10 +2,10 @@ extends RefCounted
 
 # --- Player ---
 const PLAYER_MAX_HP := 100
-const HURT_INTERVAL := 0.5
+const HURT_INTERVAL := 0.4
 const CONTACT_STACK := 3
 const BULLET_SPEED := 560.0
-const BASE_MAGNET := 180.0
+const BASE_MAGNET := 140.0
 
 # --- Round: fixed length, scored ---
 const TIME_LIMIT := 180.0
@@ -22,6 +22,13 @@ const MAX_PASSIVES := 4
 const MAX_STAGE := 5
 const SPECIAL_STAGE := 6
 const HEAL_AMOUNT := 35
+# Small repair kits dropped by enemies: the chance per kill grows with the enemy's XP. Like gems they stay until taken,
+# with a cap so they never litter the arena.
+const HEAL_DROP_PER_XP := 0.01
+const HEAL_MAX_ON_FIELD := 30
+const HEAL_PICKUP := 8
+# Points for a kit picked up at full HP.
+const HEAL_SCORE := 50
 
 # "stats" entries are [key, level-up text, short label for the library table].
 
@@ -45,8 +52,8 @@ const PASSIVES := {
 	},
 	"magnet": {
 		"name": "回収範囲",
-		"magnet": [BASE_MAGNET, 215.0, 255.0, 300.0, 350.0, 420.0],
-		"stats": [["magnet", "経験値を引き寄せる範囲が拡大", "回収半径"]],
+		"magnet": [BASE_MAGNET, 185.0, 230.0, 280.0, 340.0, 420.0],
+		"stats": [["magnet", "経験値と回復アイテムを引き寄せる範囲が拡大", "回収半径"]],
 	},
 	"max_hp": {
 		"name": "最大HP",
@@ -299,12 +306,22 @@ const ENEMY_KINDS := {
 	# Tough and slow; barely flinches.
 	"hepta": {"sides": 7, "radius": 19.0, "hp": 9.0, "speed": 0.55, "damage": 14, "xp": 7, "score": 120, "color": 2,
 		"knock": 0.35},
-	# Three-spiked star: stops, telegraphs, then charges in a straight line.
+	# Three-spiked stars: stop, telegraph, then charge in a straight line. Small and twitchy, standard, and a heavy lancer.
+	"dart": {"sides": 3, "spiky": true, "radius": 11.0, "hp": 1.0, "speed": 0.95, "damage": 6, "xp": 2, "score": 35,
+		"color": 3, "behavior": "dash", "dash_trigger": 220.0, "dash_windup": 0.4, "dash_speed": 720.0, "dash_overshoot": 140.0,
+		"dash_cooldown": 1.6, "dash_lane": 1.4},
 	"dasher": {"sides": 3, "spiky": true, "radius": 16.0, "hp": 2.0, "speed": 0.75, "damage": 10, "xp": 3, "score": 60,
 		"color": 3, "behavior": "dash"},
-	# Five-spiked star: crawls and fires slow shots.
+	"lancer": {"sides": 3, "spiky": true, "radius": 23.0, "hp": 7.0, "speed": 0.6, "damage": 18, "xp": 8, "score": 150,
+		"color": 5, "behavior": "dash", "knock": 0.4, "dash_trigger": 380.0, "dash_windup": 0.85, "dash_speed": 980.0,
+		"dash_overshoot": 340.0, "dash_cooldown": 3.0, "dash_lane": 2.0},
+	# Five- and seven-spiked stars: crawl and fire slow shots. A light turret, the standard one, and a battery firing a fan of three.
+	"turret": {"sides": 5, "spiky": true, "radius": 12.0, "hp": 2.0, "speed": 0.5, "damage": 4, "xp": 3, "score": 45,
+		"color": 4, "behavior": "shoot", "knock": 0.8, "shot_interval": 3.6, "shot_damage": 5},
 	"shooter": {"sides": 5, "spiky": true, "radius": 16.0, "hp": 4.0, "speed": 0.4, "damage": 6, "xp": 5, "score": 80,
 		"color": 4, "behavior": "shoot", "knock": 0.6},
+	"battery": {"sides": 7, "spiky": true, "radius": 22.0, "hp": 10.0, "speed": 0.32, "damage": 10, "xp": 9, "score": 170,
+		"color": 6, "behavior": "shoot", "knock": 0.3, "shot_interval": 3.4, "shot_damage": 8, "shot_count": 3},
 }
 const DASH_TRIGGER := 280.0
 const DASH_WINDUP := 0.55
@@ -320,7 +337,13 @@ const SHOT_WINDUP := 0.45
 const SHOT_SPEED := 190.0
 const SHOT_DAMAGE := 7
 const SHOT_LIFETIME := 4.0
+const SHOT_FAN := 0.32
 const SHOOTER_MAX := 14
+# Some chasers swing wide while still far off, so the horde fans out instead of trailing behind as one blob.
+const FLANK_CHANCE := 0.6
+const FLANK_ANGLE := 0.75
+const FLANK_NEAR := 140.0
+const FLANK_FAR := 360.0
 const ENEMY_BASE_HP := 10.0
 const ENEMY_HP_GRACE := 30.0
 const ENEMY_HP_RAMP := 50.0
@@ -329,6 +352,8 @@ const ENEMY_BASE_SPEED := 90.0
 const ENEMY_SPEED_RAMP := 0.4
 const ENEMY_MAX_SPEED := 250.0
 const ENEMY_CAP := 220
+# Scales every contact and shot hit; tuned together with heal drops so HP swings rather than drains.
+const ENEMY_DAMAGE_MULT := 0.85
 const KNOCKBACK := 14.0
 
 
@@ -344,11 +369,17 @@ static func enemy_speed(t: float) -> float:
 # Rings skip the special behaviours so a full circle of shooters never appears at once.
 static func pick_enemy_kind(t: float, allow_special := true) -> String:
 	var weights := {
-		"penta": clampf((t - 35.0) / 70.0, 0.0, 0.42),
-		"hepta": clampf((t - 80.0) / 90.0, 0.0, 0.22) + clampf((t - 360.0) / 240.0, 0.0, 0.25),
-		"dasher": clampf((t - 40.0) / 60.0, 0.0, 0.18) if allow_special else 0.0,
-		"shooter": clampf((t - 60.0) / 60.0, 0.0, 0.13) if allow_special else 0.0,
+		"penta": clampf((t - 35.0) / 70.0, 0.0, 0.3),
+		"hepta": clampf((t - 80.0) / 90.0, 0.0, 0.2),
 	}
+	if allow_special:
+		# Light variants arrive first, the standard ones mid-run, the heavy ones late.
+		weights["dart"] = clampf((t - 25.0) / 50.0, 0.0, 0.1)
+		weights["turret"] = clampf((t - 40.0) / 50.0, 0.0, 0.08)
+		weights["dasher"] = clampf((t - 55.0) / 60.0, 0.0, 0.1)
+		weights["shooter"] = clampf((t - 75.0) / 60.0, 0.0, 0.07)
+		weights["lancer"] = clampf((t - 110.0) / 60.0, 0.0, 0.06)
+		weights["battery"] = clampf((t - 120.0) / 60.0, 0.0, 0.04)
 	var roll := randf()
 	for kind in weights:
 		roll -= float(weights[kind])
