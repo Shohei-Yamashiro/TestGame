@@ -190,11 +190,13 @@ const WEAPONS := {
 		"damage": [18, 23, 29, 36, 44],
 		"radius": [70.0, 75.0, 80.0, 88.0, 96.0],
 		"interval": [1.2, 1.1, 1.0, 0.9, 0.8],
-		"stats": [["damage", "ダメージが増加", "ダメージ"], ["radius", "爆発範囲が拡大", "爆発半径"], ["interval", "設置間隔が短縮", "設置間隔"]],
-		"milestone": "2段爆発",
-		"milestone_desc": "爆発の少し後に、同じ場所でもう一度爆発する",
-		"special": "減速フィールド",
-		"special_desc": "爆発の跡に、敵を減速させて削る場がしばらく残る",
+		"max": [5, 6, 7, 8, 10],
+		"stats": [["damage", "ダメージが増加", "ダメージ"], ["radius", "爆発範囲が拡大", "爆発半径"], ["interval", "設置間隔が短縮", "設置間隔"],
+			["max", "設置上限が増加", "設置上限"]],
+		"milestone": "炎上",
+		"milestone_desc": "爆発に巻き込んだ敵が数秒間燃え、継続ダメージを受ける",
+		"special": "延焼",
+		"special_desc": "燃えている敵が倒れると、周りの敵に火が燃え移る",
 	},
 	"drain": {
 		"name": "ドレインリンク",
@@ -225,16 +227,15 @@ const TESSERACT_SPREAD := 0.25
 const TESSERACT_HIT_TICK := 0.25
 const TESSERACT_REST_TICK := 0.4
 const TESSERACT_REST_RATIO := 0.5
-const MINE_MAX := 8
 const MINE_LIFETIME := 8.0
 const MINE_ARM_TIME := 0.3
-const MINE_TRIGGER := 10.0
+const MINE_TRIGGER := 24.0
 const MINE_SPACING := 36.0
-const MINE_ECHO_DELAY := 0.4
-const MINE_ECHO_RATIO := 0.6
-const MINE_FIELD_TIME := 3.0
-const MINE_FIELD_TICK := 0.4
-const MINE_FIELD_RATIO := 0.2
+const MINE_BURN_TIME := 3.0
+const MINE_BURN_TICK := 0.5
+const MINE_BURN_RATIO := 0.12
+const MINE_SPREAD_RADIUS := 90.0
+const MINE_SPREAD_COUNT := 3
 const DRAIN_COST := 3
 const DRAIN_MIN_HP := 20
 const DRAIN_RANGE := 260.0

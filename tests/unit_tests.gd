@@ -150,7 +150,7 @@ func test_art_rule_friendly() -> void:
 	for look in GemScript.LOOKS:
 		check(int(look["sides"]) % 2 == 0, "gem look with %d sides must be even" % look["sides"])
 	var friendly := [Palette.PLAYER, Palette.BULLET, Palette.BULLET_PIERCE, Palette.GEM, Palette.HOMING,
-		Palette.ORBIT, Palette.NOVA, Palette.LASER, Palette.WINGS, Palette.ELECTRIC]
+		Palette.ORBIT, Palette.NOVA, Palette.LASER, Palette.WINGS, Palette.ELECTRIC, Palette.BURN]
 	friendly.append_array(Palette.GEM_TIERS)
 	for color in friendly:
 		check(color.b > color.r, "friendly color %s is not cool" % color)
@@ -415,9 +415,15 @@ func test_mine_detonates_and_caps() -> void:
 	game._add_weapon("mine")
 	var mine = game.weapons["mine"]
 	mine._cd = 999.0
-	for i in Balance.MINE_MAX + 3:
-		mine.place(Vector2(400 + i * 50, 300))
-	check(mine.mines.size() == Balance.MINE_MAX, "mines should cap at %d" % Balance.MINE_MAX)
+	var caps: Array = Balance.WEAPONS["mine"]["max"]
+	for level in [1, Balance.MAX_STAGE]:
+		mine.level = level
+		mine.mines.clear()
+		for i in 15:
+			mine.place(Vector2(400 + i * 50, 300))
+		check(mine.mines.size() == int(caps[level - 1]), "at Lv%d mines should cap at %d" % [level, caps[level - 1]])
+	check(int(caps[Balance.MAX_STAGE - 1]) > int(caps[0]), "the mine cap should grow with level")
+	mine.level = 1
 	mine.mines.clear()
 	mine.place(Vector2(300, 0))
 	var enemy = _sturdy_enemy(game, Vector2(300, 0))
@@ -426,6 +432,64 @@ func test_mine_detonates_and_caps() -> void:
 	mine._physics_process(Balance.MINE_ARM_TIME + 0.01)
 	check(mine.mines.is_empty(), "an armed mine touched by an enemy should detonate")
 	check(enemy.hp < start_hp, "the blast should damage the enemy")
+	game.free()
+
+
+func test_mine_trigger_grows_with_area() -> void:
+	var game = _new_game()
+	game._add_weapon("mine")
+	var mine = game.weapons["mine"]
+	mine._cd = 999.0
+	# The search counts the enemy's own radius, so stand it clear of that too.
+	var gap := Balance.MINE_TRIGGER + 20.0
+	mine.place(Vector2(300, 0))
+	_sturdy_enemy(game, Vector2(300 + gap, 0))
+	game._separate_enemies()
+	mine._physics_process(Balance.MINE_ARM_TIME + 0.01)
+	check(mine.mines.size() == 1, "an enemy just outside the trigger range should not set the mine off")
+	game.passives["area"] = Balance.MAX_STAGE
+	game._apply_stats()
+	check(mine.trigger_radius() > Balance.MINE_TRIGGER, "the area passive should widen the trigger range")
+	mine._physics_process(1.0 / 60.0)
+	check(mine.mines.is_empty(), "with a wider trigger the same enemy should set the mine off")
+	game.free()
+
+
+func test_mine_milestone_sets_enemies_burning() -> void:
+	var game = _new_game()
+	game._add_weapon("mine")
+	var mine = game.weapons["mine"]
+	mine.level = Balance.MILESTONE_STAGE - 1
+	var cold = _sturdy_enemy(game, Vector2(300, 0))
+	var enemy = _sturdy_enemy(game, Vector2(600, 0))
+	game._separate_enemies()
+	mine.detonate(Vector2(300, 0))
+	check(not cold.is_burning(), "before the milestone the blast should not set enemies alight")
+	mine.level = Balance.MILESTONE_STAGE
+	mine.detonate(Vector2(600, 0))
+	check(enemy.is_burning(), "after the milestone the blast should set enemies alight")
+	var hp_after_blast: int = enemy.hp
+	for i in int(Balance.MINE_BURN_TIME * 60.0) + 10:
+		enemy._physics_process(1.0 / 60.0)
+	check(enemy.hp < hp_after_blast, "a burning enemy should keep taking damage")
+	check(not enemy.is_burning(), "the fire should go out after its duration")
+	game.free()
+
+
+func test_mine_special_spreads_fire_on_death() -> void:
+	var game = _new_game()
+	var first = _sturdy_enemy(game, Vector2(300, 0))
+	var near = _sturdy_enemy(game, Vector2(340, 0))
+	first.apply_burn(1, Balance.MINE_BURN_TIME)
+	first.take_damage(first.hp, Vector2.ZERO, 0.0)
+	check(not near.is_burning(), "without the special the fire should not spread")
+	var second = _sturdy_enemy(game, Vector2(600, 0))
+	var neighbour = _sturdy_enemy(game, Vector2(640, 0))
+	var far = _sturdy_enemy(game, Vector2(600 + Balance.MINE_SPREAD_RADIUS * 3.0, 0))
+	second.apply_burn(1, Balance.MINE_BURN_TIME, Balance.MINE_SPREAD_RADIUS)
+	second.take_damage(second.hp, Vector2.ZERO, 0.0)
+	check(neighbour.is_burning(), "with the special a burning enemy's death should set its neighbour alight")
+	check(not far.is_burning(), "the fire should not jump beyond the spread radius")
 	game.free()
 
 

@@ -35,6 +35,11 @@ var _dash_length := 0.0
 var _dash_start := Vector2.ZERO
 var _slow_time := 0.0
 var _slow_factor := 1.0
+var _burn_time := 0.0
+var _burn_tick := 0.0
+var _burn_damage := 0
+# Above zero, the fire jumps this far to nearby enemies when this one dies burning.
+var _burn_spread := 0.0
 
 
 func setup(enemy_kind: String, t: float) -> void:
@@ -69,10 +74,46 @@ func apply_slow(factor: float, duration: float) -> void:
 	_slow_factor = minf(factor, 1.0)
 
 
+func apply_burn(damage: int, duration: float, spread := 0.0) -> void:
+	if _burn_time <= 0.0:
+		_burn_tick = Balance.MINE_BURN_TICK
+	_burn_time = maxf(_burn_time, duration)
+	_burn_damage = maxi(_burn_damage, damage)
+	_burn_spread = maxf(_burn_spread, spread)
+
+
+func is_burning() -> bool:
+	return _burn_time > 0.0
+
+
+func _update_burn(delta: float) -> void:
+	_burn_time -= delta
+	_burn_tick -= delta
+	if _burn_tick <= 0.0:
+		_burn_tick += Balance.MINE_BURN_TICK
+		take_damage(_burn_damage, Vector2.ZERO, 0.0)
+
+
+func _spread_fire() -> void:
+	var near: Array = []
+	for node in get_tree().get_nodes_in_group("enemies"):
+		var other := node as Node2D
+		if other != null and other.global_position.distance_squared_to(global_position) <= _burn_spread * _burn_spread:
+			near.append(other)
+	near.sort_custom(func(a, b): return a.global_position.distance_squared_to(global_position) < b.global_position.distance_squared_to(global_position))
+	for other in near.slice(0, Balance.MINE_SPREAD_COUNT):
+		other.apply_burn(_burn_damage, Balance.MINE_BURN_TIME, _burn_spread)
+		var fx := get_tree().get_first_node_in_group("fx")
+		if fx:
+			fx.burst(other.global_position, Palette.hdr(Palette.BURN, 1.4), 5, 160.0)
+
+
 func _physics_process(delta: float) -> void:
 	# Rotation is a transform change; only animated states need a fresh draw.
-	if _age < SPAWN_IN + 0.05 or _flash > 0.0 or _state != State.CHASE or _slow_time > 0.0 or behavior == "shoot":
+	if _age < SPAWN_IN + 0.05 or _flash > 0.0 or _state != State.CHASE or _slow_time > 0.0 or _burn_time > 0.0 or behavior == "shoot":
 		queue_redraw()
+	if _burn_time > 0.0 and alive:
+		_update_burn(delta)
 	_age += delta
 	if _flash > 0.0:
 		_flash = maxf(0.0, _flash - delta)
@@ -153,6 +194,8 @@ func take_damage(amount: int, from_dir: Vector2, knockback: float = Balance.KNOC
 		var fx := get_tree().get_first_node_in_group("fx")
 		if fx:
 			fx.shatter(global_position, Palette.hdr(color, 1.2), clampf(radius / 12.0, 0.8, 1.6))
+		if _burn_time > 0.0 and _burn_spread > 0.0:
+			_spread_fire()
 		died.emit(global_position, xp_value, points)
 		queue_free()
 	elif _state == State.CHASE:
@@ -195,6 +238,20 @@ func _draw_lane(charge: float) -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
+# Three flickering tongues of plasma rising above the body, drawn upright whatever the spin.
+func _draw_flames(r: float) -> void:
+	draw_set_transform(Vector2.ZERO, -rotation, Vector2.ONE)
+	for k in 3:
+		var x := (float(k) - 1.0) * r * 0.55
+		var height := r * (0.9 + 0.35 * sin(_age * 14.0 + float(k) * 2.1)) * (1.2 if k == 1 else 0.85)
+		var base := Vector2(x, -r * 0.35)
+		var tongue := PackedVector2Array([base + Vector2(-r * 0.28, 0), base + Vector2(0, -height), base + Vector2(r * 0.28, 0)])
+		var flame := Palette.hdr(Palette.BURN, 1.6)
+		flame.a = 0.75
+		draw_colored_polygon(tongue, flame)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
 func _draw() -> void:
 	var grow := clampf(_age / SPAWN_IN, 0.0, 1.0)
 	var scale_in := 1.0 - pow(1.0 - grow, 3.0)
@@ -227,6 +284,8 @@ func _draw() -> void:
 		var frost := Palette.hdr(Palette.SLOW, 1.2)
 		frost.a = 0.55
 		draw_arc(Vector2.ZERO, radius + 4.0, 0.0, TAU, 20, frost, 1.5, true)
+	if _burn_time > 0.0:
+		_draw_flames(r)
 	if grow < 1.0:
 		var ring := Palette.hdr(color, 1.2)
 		ring.a = 1.0 - grow
