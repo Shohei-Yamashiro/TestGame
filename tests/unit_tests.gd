@@ -430,6 +430,13 @@ func test_mine_detonates_and_caps() -> void:
 	game.free()
 
 
+func test_hp_bar_grows_with_max_hp() -> void:
+	var panel = load("res://scripts/ui/status_panel.gd")
+	check(is_equal_approx(panel.bar_width(200), panel.bar_width(100) * 2.0), "the HP bar should be twice as long at double max HP")
+	var widest: int = Balance.PASSIVES["max_hp"]["max_hp"][Balance.MAX_STAGE]
+	check(panel.BAR_LEFT + panel.bar_width(widest) < 540.0, "the longest HP bar must stay clear of the centred timer")
+
+
 func test_choices_respect_slot_limits() -> void:
 	var game = _new_game()
 	# The run starts with the blaster, so one weapon slot is already taken.
