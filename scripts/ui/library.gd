@@ -128,6 +128,8 @@ static func format_value(key: String, is_weapon: bool, value: float) -> String:
 			return "%.1f秒" % value
 		"drain":
 			return "%d%%" % roundi(value * 100.0)
+		"max":
+			return "%d個" % roundi(value)
 		"armor":
 			return "-%d%%" % roundi(value * 100.0)
 		"regen":
