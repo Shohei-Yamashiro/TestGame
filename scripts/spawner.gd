@@ -7,8 +7,9 @@ const EnemyScript := preload("res://scripts/enemy.gd")
 
 const LEASH := 850.0
 const EDGE_MARGIN := 40.0
-const PACK_AHEAD := 0.4
-const PACK_SIDE := 0.3
+# Directions around the player are split into sectors; most packs and every straggler enter where the horde is thinnest.
+const SECTORS := 8
+const PACK_SPARSE := 0.7
 # Packs of enemies with a special behaviour stay small so they never arrive as a wall.
 const BEHAVIOR_PACK_MAX := 3
 
@@ -46,17 +47,9 @@ func spawn_enemy(kind: String, at: Vector2) -> void:
 	enemy.global_position = at
 
 
-# A small clump entering from one point on the screen edge, mostly ahead of or beside the player
-# so a moving player keeps running into fresh enemies instead of leaving them all behind.
+# A small clump entering from one point on the screen edge, usually on the side with the fewest enemies.
 func spawn_pack() -> void:
-	var heading: Vector2 = game.player.velocity
-	var origin := edge_spawn_position()
-	if heading.length_squared() >= 1.0:
-		var roll := randf()
-		if roll < PACK_AHEAD:
-			origin = edge_position_toward(heading)
-		elif roll < PACK_AHEAD + PACK_SIDE:
-			origin = edge_position_toward(heading.orthogonal() * (1.0 if randf() < 0.5 else -1.0))
+	var origin := sparse_edge_position(sector_counts()) if randf() < PACK_SPARSE else edge_spawn_position()
 	var kind := Balance.pick_enemy_kind(game.elapsed)
 	var count := Balance.trickle_pack(game.elapsed)
 	if Balance.ENEMY_KINDS[kind].has("behavior"):
@@ -77,13 +70,51 @@ func spawn_ring() -> void:
 		spawn_enemy(Balance.pick_enemy_kind(game.elapsed, false), center + Vector2.from_angle(angle) * radius + jitter)
 
 
-# Stragglers reappear on the edge the player is heading toward, so outrunning the horde doesn't thin it out.
+# Stragglers reappear on the thinnest edge, so outrunning the horde only closes the gap it left.
 func leash_enemies() -> void:
-	var player: Node2D = game.player
+	var origin: Vector2 = game.player.global_position
+	var far: Array[Node2D] = []
 	for node in game.get_tree().get_nodes_in_group("enemies"):
 		var enemy := node as Node2D
-		if enemy != null and enemy.global_position.distance_to(player.global_position) > LEASH:
-			enemy.global_position = edge_position_toward(game.player.velocity)
+		if enemy != null and enemy.global_position.distance_squared_to(origin) > LEASH * LEASH:
+			far.append(enemy)
+	if far.is_empty():
+		return
+	var counts := sector_counts()
+	for enemy in far:
+		enemy.global_position = sparse_edge_position(counts)
+
+
+# Enemies within the leash per direction sector around the player.
+func sector_counts() -> Array[int]:
+	var counts: Array[int] = []
+	counts.resize(SECTORS)
+	counts.fill(0)
+	var origin: Vector2 = game.player.global_position
+	for node in game.get_tree().get_nodes_in_group("enemies"):
+		var offset: Vector2 = (node as Node2D).global_position - origin
+		if offset.length_squared() <= LEASH * LEASH:
+			counts[sector_of(offset)] += 1
+	return counts
+
+
+static func sector_of(offset: Vector2) -> int:
+	return posmod(int(floor(offset.angle() / TAU * SECTORS)), SECTORS)
+
+
+# Picks one of the emptiest sectors and counts the arrival there, so a batch spreads across the gaps.
+func sparse_edge_position(counts: Array[int]) -> Vector2:
+	var fewest := counts[0]
+	for c in counts:
+		fewest = mini(fewest, c)
+	var options: Array[int] = []
+	for i in SECTORS:
+		if counts[i] == fewest:
+			options.append(i)
+	var sector: int = options.pick_random()
+	counts[sector] += 1
+	var angle := (float(sector) + randf()) * TAU / SECTORS
+	return edge_from(game.player.global_position, Vector2.from_angle(angle))
 
 
 func edge_spawn_position() -> Vector2:
@@ -99,12 +130,19 @@ func edge_spawn_position() -> Vector2:
 			return Vector2(view.position.x - EDGE_MARGIN, randf_range(view.position.y, view.end.y))
 
 
-func edge_position_toward(dir: Vector2) -> Vector2:
+func edge_position_toward(dir: Vector2, spread := 0.9) -> Vector2:
 	if dir.length_squared() < 1.0:
 		return edge_spawn_position()
-	var view: Rect2 = game.camera.view_rect()
-	var center := view.get_center()
-	var ray := dir.normalized().rotated(randf_range(-0.9, 0.9))
-	var half := view.size * 0.5 + Vector2(EDGE_MARGIN, EDGE_MARGIN)
-	var t := minf(half.x / maxf(absf(ray.x), 0.001), half.y / maxf(absf(ray.y), 0.001))
-	return center + ray * t
+	var center: Vector2 = game.camera.view_rect().get_center()
+	return edge_from(center, dir.normalized().rotated(randf_range(-spread, spread)))
+
+
+# Where a ray from a point inside the view leaves the screen, just past the margin.
+func edge_from(origin: Vector2, ray: Vector2) -> Vector2:
+	var view: Rect2 = game.camera.view_rect().grow(EDGE_MARGIN)
+	var t := INF
+	if absf(ray.x) > 0.001:
+		t = minf(t, ((view.end.x if ray.x > 0.0 else view.position.x) - origin.x) / ray.x)
+	if absf(ray.y) > 0.001:
+		t = minf(t, ((view.end.y if ray.y > 0.0 else view.position.y) - origin.y) / ray.y)
+	return origin + ray * maxf(t, 0.0)

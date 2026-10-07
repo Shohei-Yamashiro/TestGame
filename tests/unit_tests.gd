@@ -326,22 +326,29 @@ func test_enemy_kinds_have_light_and_heavy_variants() -> void:
 			check(int(heavier.xp) > int(lighter.xp), "%s should be worth more than %s" % [group[i], group[i - 1]])
 
 
-func test_packs_favour_the_players_heading() -> void:
+func test_sparse_edge_fills_the_emptiest_sector() -> void:
 	var game = _new_game()
-	seed(3)
-	game.player.velocity = Vector2(300, 0)
-	var center: Vector2 = game.camera.view_rect().get_center()
-	var ahead := 0
-	var behind := 0
-	for i in 60:
-		game.spawner.spawn_pack()
-		for enemy in game.get_tree().get_nodes_in_group("enemies"):
-			if enemy.global_position.x > center.x + 100.0:
-				ahead += 1
-			elif enemy.global_position.x < center.x - 100.0:
-				behind += 1
-			enemy.free()
-	check(ahead > behind * 2, "packs should mostly arrive ahead of a moving player (ahead %d, behind %d)" % [ahead, behind])
+	var center: Vector2 = game.player.global_position
+	for i in 20:
+		var counts: Array[int] = [5, 5, 5, 0, 5, 5, 5, 5]
+		var at: Vector2 = game.spawner.sparse_edge_position(counts)
+		check(game.spawner.sector_of(at - center) == 3, "arrival should land in the empty sector, got %d" % game.spawner.sector_of(at - center))
+		check(counts[3] == 1, "the chosen sector should count the arrival")
+	game.free()
+
+
+func test_leashed_enemies_return_where_the_horde_is_thin() -> void:
+	var game = _new_game()
+	var center: Vector2 = game.player.global_position
+	for s in 7:
+		game.spawner.spawn_enemy("tri", center + Vector2.from_angle((float(s) + 0.5) * TAU / 8.0) * 200.0)
+	game.spawner.spawn_enemy("tri", center + Vector2(game.spawner.LEASH + 300.0, 0))
+	var enemies: Array = game.get_tree().get_nodes_in_group("enemies")
+	var straggler = enemies[enemies.size() - 1]
+	game.spawner.leash_enemies()
+	var offset: Vector2 = straggler.global_position - center
+	check(offset.length() < game.spawner.LEASH, "the straggler should be pulled back within the leash")
+	check(game.spawner.sector_of(offset) == 7, "the straggler should reappear in the only empty sector, got %d" % game.spawner.sector_of(offset))
 	game.free()
 
 
@@ -369,6 +376,11 @@ func test_heal_drops_are_capped_and_heal_on_pickup() -> void:
 	kits[0]._physics_process(0.016)
 	check(game.heals_picked == 1, "walking over a kit should count as a pickup")
 	check(game.player.hp == 10 + Balance.HEAL_PICKUP, "a kit should restore %d HP, got %d" % [Balance.HEAL_PICKUP, game.player.hp])
+	game.player.hp = game.player.max_hp
+	var before: int = game.score
+	kits[1].global_position = game.player.global_position
+	kits[1]._physics_process(0.016)
+	check(game.score == before + Balance.HEAL_SCORE, "a kit at full HP should turn into %d points" % Balance.HEAL_SCORE)
 	game.free()
 
 

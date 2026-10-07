@@ -127,8 +127,11 @@ func _steer() -> void:
 				var dist := d.length()
 				if dist < 170.0 and dist > 0.1:
 					flee += d / dist * (170.0 - dist) / 170.0
+			var kit := _wanted_heal(me, 260.0)
 			if flee.length() > 0.3:
 				_casual_dir = flee.normalized()
+			elif kit != null:
+				_casual_dir = (kit.global_position - me).normalized()
 			elif _casual_dir == Vector2.ZERO or randf() < 0.1:
 				_casual_dir = Vector2.from_angle(randf() * TAU)
 		dir = _casual_dir
@@ -147,7 +150,10 @@ func _steer() -> void:
 				if gd < best_dist:
 					best_dist = gd
 					best_gem = node
-		if best_gem != null:
+		var kit := _wanted_heal(me, 450.0)
+		if kit != null:
+			dir += (kit.global_position - me).normalized() * 2.0
+		elif best_gem != null:
 			dir += (best_gem.global_position - me).normalized() * 1.2
 		# Gentle orbit so the bot doesn't sit still in a calm moment.
 		dir += Vector2.from_angle(game.elapsed * 0.4) * 0.3
@@ -155,6 +161,20 @@ func _steer() -> void:
 	_press(KEY_A, dir.x < -0.35)
 	_press(KEY_S, dir.y > 0.35)
 	_press(KEY_W, dir.y < -0.35)
+
+
+# Once hurt, a player goes out of their way for a nearby heal kit.
+func _wanted_heal(me: Vector2, reach: float) -> Node2D:
+	if game.player.hp > game.player.max_hp * 0.7:
+		return null
+	var best: Node2D = null
+	var best_dist := reach
+	for node in game.get_tree().get_nodes_in_group("heals"):
+		var d: float = me.distance_to(node.global_position)
+		if d < best_dist:
+			best_dist = d
+			best = node
+	return best
 
 
 func _press(key: Key, down: bool) -> void:

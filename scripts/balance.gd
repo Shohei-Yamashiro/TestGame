@@ -23,10 +23,12 @@ const MAX_STAGE := 5
 const SPECIAL_STAGE := 6
 const HEAL_AMOUNT := 35
 # Repair kits dropped by enemies: the chance per kill grows with the enemy's XP, and only a few lie about at once.
-const HEAL_DROP_PER_XP := 0.01
-const HEAL_MAX_ON_FIELD := 2
-const HEAL_PICKUP := 20
-const HEAL_LIFETIME := 25.0
+const HEAL_DROP_PER_XP := 0.08
+const HEAL_MAX_ON_FIELD := 5
+const HEAL_PICKUP := 25
+# Points for a kit picked up at full HP.
+const HEAL_SCORE := 150
+const HEAL_LIFETIME := 20.0
 
 # "stats" entries are [key, level-up text, short label for the library table].
 
@@ -337,9 +339,7 @@ const SHOT_DAMAGE := 7
 const SHOT_LIFETIME := 4.0
 const SHOT_FAN := 0.32
 const SHOOTER_MAX := 14
-# Chasers read ahead of the player by a random 0..CHASE_LEAD_MAX seconds, and some swing wide while still far off,
-# so the horde fans out and cuts across a circling player instead of trailing behind as one blob.
-const CHASE_LEAD_MAX := 0.9
+# Some chasers swing wide while still far off, so the horde fans out instead of trailing behind as one blob.
 const FLANK_CHANCE := 0.6
 const FLANK_ANGLE := 0.75
 const FLANK_NEAR := 140.0
@@ -352,6 +352,8 @@ const ENEMY_BASE_SPEED := 90.0
 const ENEMY_SPEED_RAMP := 0.4
 const ENEMY_MAX_SPEED := 250.0
 const ENEMY_CAP := 220
+# Scales every contact and shot hit; tuned together with heal drops so HP swings rather than drains.
+const ENEMY_DAMAGE_MULT := 1.3
 const KNOCKBACK := 14.0
 
 

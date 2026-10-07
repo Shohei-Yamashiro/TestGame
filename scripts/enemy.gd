@@ -45,7 +45,6 @@ var dash_lane := Balance.DASH_LANE_WIDTH
 var shot_interval := Balance.SHOT_INTERVAL
 var shot_damage := Balance.SHOT_DAMAGE
 var shot_count := 1
-var _lead := 0.0
 var _flank := 0.0
 var _burn_time := 0.0
 var _burn_tick := 0.0
@@ -64,7 +63,7 @@ func setup(enemy_kind: String, t: float) -> void:
 	radius = data["radius"]
 	hp = int(round(Balance.ENEMY_BASE_HP * float(data["hp"]) * Balance.enemy_hp_scale(t)))
 	speed = Balance.enemy_speed(t) * float(data["speed"])
-	contact_damage = int(data["damage"]) + int(t / 60.0) * 2
+	contact_damage = int(round(float(int(data["damage"]) + int(t / 60.0) * 2) * Balance.ENEMY_DAMAGE_MULT))
 	xp_value = data["xp"]
 	points = data["score"]
 	color = Palette.ENEMIES[data["color"]]
@@ -75,9 +74,8 @@ func setup(enemy_kind: String, t: float) -> void:
 	dash_cooldown = data.get("dash_cooldown", Balance.DASH_COOLDOWN)
 	dash_lane = data.get("dash_lane", Balance.DASH_LANE_WIDTH)
 	shot_interval = data.get("shot_interval", Balance.SHOT_INTERVAL)
-	shot_damage = data.get("shot_damage", Balance.SHOT_DAMAGE)
+	shot_damage = int(round(float(data.get("shot_damage", Balance.SHOT_DAMAGE)) * Balance.ENEMY_DAMAGE_MULT))
 	shot_count = data.get("shot_count", 1)
-	_lead = randf() * Balance.CHASE_LEAD_MAX
 	if randf() < Balance.FLANK_CHANCE:
 		_flank = randf_range(-Balance.FLANK_ANGLE, Balance.FLANK_ANGLE)
 
@@ -163,11 +161,8 @@ func _physics_process(delta: float) -> void:
 # Heads for where the player is about to be, swinging wide while still far off; straight in once close.
 func chase_direction(to_player: Vector2) -> Vector2:
 	var dist := to_player.length()
-	var aim := to_player
-	if dist > Balance.FLANK_NEAR:
-		aim += Vector2(_player.get("velocity")) * _lead
 	var swing := _flank * clampf((dist - Balance.FLANK_NEAR) / (Balance.FLANK_FAR - Balance.FLANK_NEAR), 0.0, 1.0)
-	return aim.normalized().rotated(swing)
+	return (to_player / maxf(dist, 0.001)).rotated(swing)
 
 
 func _update_dash(delta: float, to_player: Vector2, pace: float) -> void:

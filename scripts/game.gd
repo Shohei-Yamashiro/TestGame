@@ -59,6 +59,7 @@ var spawner := Spawner.new(self)
 var elapsed := 0.0
 var kills := 0
 var heals_picked := 0
+var heal_score := 0
 var level := 1
 var xp := 0
 var xp_to_next := Balance.xp_to_next(1)
@@ -319,8 +320,13 @@ func drop_heal(at: Vector2) -> void:
 	kit.global_position = at
 
 
+# At full HP a kit is banked as points instead, so picking one up is never wasted.
 func _on_heal_collected(amount: int) -> void:
 	heals_picked += 1
+	if player.hp >= player.max_hp:
+		score += Balance.HEAL_SCORE
+		heal_score += Balance.HEAL_SCORE
+		return
 	player.heal(amount)
 
 
@@ -376,6 +382,8 @@ func _finish(survived: bool) -> void:
 	var lines: Array[String] = ["撃破 %d体  %d" % [kills, kill_score]]
 	if overflow_score > 0:
 		lines.append("強化ボーナス  %d" % overflow_score)
+	if heal_score > 0:
+		lines.append("回復ボーナス  %d" % heal_score)
 	if survived:
 		lines.append("クリア  %d    残りHP  %d" % [clear_bonus, hp_bonus])
 	else:
