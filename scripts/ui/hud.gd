@@ -23,7 +23,7 @@ func refresh(game) -> void:
 		_time_label.add_theme_color_override("font_color", Color(1.0, 0.35 * pulse + 0.1, 0.35 * pulse + 0.1))
 	else:
 		_time_label.add_theme_color_override("font_color", TEXT_COLOR)
-	_score_label.text = "SCORE  %d" % game.score
+	_score_label.text = "%d" % game.score
 	var weapon_ids: Array = game.weapons.keys()
 	for i in _weapon_icons.size():
 		if i < weapon_ids.size():

@@ -44,15 +44,6 @@ offset_bottom = 82.0
 mouse_filter = 2
 script = ExtResource("4_status")
 
-[node name="ScoreLabel" type="Label" parent="Root"]
-layout_mode = 0
-offset_left = 94.0
-offset_top = 38.0
-offset_right = 444.0
-offset_bottom = 70.0
-theme_override_colors/font_color = Color(1, 0.88, 0.45, 1)
-theme_override_font_sizes/font_size = 22
-text = "SCORE  0"
 
 [node name="TimeCaption" type="Label" parent="Root"]
 layout_mode = 0
@@ -75,11 +66,31 @@ theme_override_font_sizes/font_size = 34
 text = "3:00"
 horizontal_alignment = 1
 
+[node name="ScoreCaption" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 730.0
+offset_top = 6.0
+offset_right = 870.0
+offset_bottom = 28.0
+theme_override_colors/font_color = Color(0.7, 0.85, 0.95, 0.75)
+theme_override_font_sizes/font_size = 15
+text = "SCORE"
+
+[node name="ScoreLabel" type="Label" parent="Root"]
+layout_mode = 0
+offset_left = 728.0
+offset_top = 22.0
+offset_right = 868.0
+offset_bottom = 66.0
+theme_override_colors/font_color = Color(1, 0.88, 0.45, 1)
+theme_override_font_sizes/font_size = 30
+text = "0"
+
 [node name="WeaponIcons" type="Control" parent="Root"]
 layout_mode = 0
-offset_left = 846.0
+offset_left = 876.0
 offset_top = 14.0
-offset_right = 846.0
+offset_right = 876.0
 offset_bottom = 14.0
 mouse_filter = 2
 
@@ -111,18 +122,18 @@ icon_size = 40.0
 
 [node name="Divider" type="ColorRect" parent="Root"]
 layout_mode = 0
-offset_left = 1036.0
+offset_left = 1066.0
 offset_top = 16.0
-offset_right = 1037.0
+offset_right = 1067.0
 offset_bottom = 68.0
 mouse_filter = 2
 color = Color(0.35, 0.95, 1, 0.3)
 
 [node name="PassiveIcons" type="Control" parent="Root"]
 layout_mode = 0
-offset_left = 1052.0
+offset_left = 1082.0
 offset_top = 14.0
-offset_right = 1052.0
+offset_right = 1082.0
 offset_bottom = 14.0
 mouse_filter = 2
 
