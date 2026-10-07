@@ -144,24 +144,38 @@ func _arrow_hexagon(left: float, mid_y: float, width: float, k: float) -> Packed
 func _draw_symbol(c: Vector2, r: float, color: Color) -> void:
 	match item_id:
 		"blaster":
-			draw_colored_polygon(PackedVector2Array([c + Vector2(r, 0), c + Vector2(0, r * 0.45), c + Vector2(-r * 0.4, 0), c + Vector2(0, -r * 0.45)]), color)
-			draw_line(c + Vector2(-r * 1.1, -r * 0.35), c + Vector2(-r * 0.55, -r * 0.35), color, 2.0, true)
-			draw_line(c + Vector2(-r * 1.1, r * 0.35), c + Vector2(-r * 0.55, r * 0.35), color, 2.0, true)
+			# A plasma dart flying to the upper right, trailing speed streaks.
+			var dart := _along(c, r, -PI * 0.25, [
+				Vector2(1.05, 0), Vector2(0.3, 0.36), Vector2(0.42, 0.12), Vector2(-0.3, 0.12),
+				Vector2(-0.3, -0.12), Vector2(0.42, -0.12), Vector2(0.3, -0.36),
+			])
+			draw_colored_polygon(dart, color)
+			var streaks := _along(c, r, -PI * 0.25, [
+				Vector2(-0.5, 0), Vector2(-1.1, 0), Vector2(-0.45, 0.32), Vector2(-0.85, 0.32),
+				Vector2(-0.45, -0.32), Vector2(-0.85, -0.32),
+			])
+			draw_line(streaks[0], streaks[1], color, 2.5, true)
+			draw_line(streaks[2], streaks[3], Color(color.r, color.g, color.b, 0.6), 1.5, true)
+			draw_line(streaks[4], streaks[5], Color(color.r, color.g, color.b, 0.6), 1.5, true)
 		"homing":
-			# An S traced from the lower-left, ending in an arrowhead at the upper right.
-			var bend := r * 0.5
-			var stretch := Vector2(1.3, 1.0)
-			var path := PackedVector2Array()
+			# A missile curving in on a reticle, its trail fading toward the launch point.
+			var target := c + Vector2(r * 0.45, -r * 0.45)
+			draw_arc(target, r * 0.4, 0.0, TAU, 20, color, 1.5, true)
+			for k in 4:
+				var d := Vector2.from_angle(PI * 0.5 * float(k))
+				draw_line(target + d * r * 0.28, target + d * r * 0.58, color, 1.5, true)
+			var start := c + Vector2(-r * 0.95, r * 0.8)
+			var bend := c + Vector2(r * 0.5, r * 0.95)
+			var head := c + Vector2(r * 0.12, -r * 0.05)
+			var trail := PackedVector2Array()
 			for i in 13:
-				var a := lerpf(PI * 0.8, -PI * 0.5, float(i) / 12.0)
-				path.append(c + Vector2(0, bend) + Vector2.from_angle(a) * bend * stretch)
-			for i in range(1, 13):
-				var a := lerpf(PI * 0.5, PI * 1.72, float(i) / 12.0)
-				path.append(c + Vector2(0, -bend) + Vector2.from_angle(a) * bend * stretch)
-			draw_polyline(path, color, 2.5, true)
-			var tip := path[path.size() - 1]
-			var dir := (tip - path[path.size() - 2]).normalized()
-			draw_colored_polygon(PackedVector2Array([tip + dir * r * 0.45, tip + dir.orthogonal() * r * 0.28, tip - dir.orthogonal() * r * 0.28]), color)
+				var t := float(i) / 12.0
+				trail.append(start.lerp(bend, t).lerp(bend.lerp(head, t), t))
+			for i in 12:
+				draw_line(trail[i], trail[i + 1], Color(color.r, color.g, color.b, 0.2 + 0.8 * float(i) / 11.0), 2.5, true)
+			var dir := (head - trail[11]).normalized()
+			var side := dir.orthogonal() * r * 0.3
+			draw_colored_polygon(PackedVector2Array([head + dir * r * 0.5, head + side, head - dir * r * 0.05, head - side]), color)
 		"orbit":
 			draw_arc(c, r * 0.9, 0.0, TAU, 24, Color(color.r, color.g, color.b, 0.6), 1.5, true)
 			draw_circle(c, r * 0.18, color)
@@ -188,16 +202,16 @@ func _draw_symbol(c: Vector2, r: float, color: Color) -> void:
 					var normal := dir.orthogonal() * (r * 0.24)
 					draw_colored_polygon(PackedVector2Array([base + normal * 0.3, (base + tip) * 0.5 + normal, tip, base - normal * 0.3]), Color(color.r, color.g, color.b, 1.0 - 0.22 * float(i)))
 		"chain":
-			# A zigzag bolt joining two nodes.
+			# A glowing lightning bolt with two sparkles beside it.
 			var bolt := PackedVector2Array([
-				c + Vector2(-r * 0.85, -r * 0.75), c + Vector2(-r * 0.05, -r * 0.2), c + Vector2(-r * 0.35, r * 0.15),
-				c + Vector2(r * 0.85, r * 0.75),
+				c + Vector2(r * 0.3, -r * 1.05), c + Vector2(-r * 0.5, r * 0.1), c + Vector2(-r * 0.02, r * 0.1),
+				c + Vector2(-r * 0.32, r * 1.0), c + Vector2(r * 0.55, -r * 0.22), c + Vector2(r * 0.08, -r * 0.22),
 			])
-			draw_polyline(bolt, Color(color.r, color.g, color.b, 0.35), 6.0, true)
-			draw_polyline(bolt, color, 2.0, true)
-			for p in [bolt[0], bolt[3]]:
-				var d := r * 0.24
-				draw_colored_polygon(PackedVector2Array([p + Vector2(0, -d), p + Vector2(d, 0), p + Vector2(0, d), p + Vector2(-d, 0)]), color)
+			draw_polyline(Palette.closed(bolt), Color(color.r, color.g, color.b, 0.25), 5.0, true)
+			draw_colored_polygon(bolt, color)
+			for p in [c + Vector2(-r * 0.75, -r * 0.55), c + Vector2(r * 0.8, r * 0.45)]:
+				var d := r * 0.14
+				draw_colored_polygon(PackedVector2Array([p + Vector2(0, -d * 1.6), p + Vector2(d, 0), p + Vector2(0, d * 1.6), p + Vector2(-d, 0)]), Color(color.r, color.g, color.b, 0.8))
 		"tesseract":
 			var outer := r * 0.85
 			var inner := r * 0.4
@@ -226,16 +240,25 @@ func _draw_symbol(c: Vector2, r: float, color: Color) -> void:
 				var p := a.lerp(b, t)
 				draw_colored_polygon(PackedVector2Array([p + Vector2(0, -small), p + Vector2(small, 0), p + Vector2(0, small), p + Vector2(-small, 0)]), color)
 		"attack":
-			var pts := PackedVector2Array()
-			for i in 8:
-				var radius := r * 1.05 if i % 2 == 0 else r * 0.32
-				pts.append(c + Vector2.from_angle(-PI * 0.5 + PI * float(i) / 4.0) * radius)
-			draw_colored_polygon(pts, color)
-		"rate":
-			draw_colored_polygon(PackedVector2Array([
-				c + Vector2(r * 0.25, -r * 1.05), c + Vector2(-r * 0.55, r * 0.15), c + Vector2(-r * 0.05, r * 0.15),
-				c + Vector2(-r * 0.3, r * 1.05), c + Vector2(r * 0.55, -r * 0.2), c + Vector2(r * 0.05, -r * 0.2),
+			# A sword pointing to the upper right.
+			var angle := -PI * 0.25
+			draw_colored_polygon(_along(c, r, angle, [
+				Vector2(1.1, 0), Vector2(0.85, 0.15), Vector2(-0.3, 0.15), Vector2(-0.3, -0.15), Vector2(0.85, -0.15),
 			]), color)
+			var hilt := _along(c, r, angle, [Vector2(-0.35, 0.42), Vector2(-0.35, -0.42), Vector2(-0.38, 0), Vector2(-0.78, 0)])
+			draw_line(hilt[0], hilt[1], color, 3.0, true)
+			draw_line(hilt[2], hilt[3], color, 3.5, true)
+			draw_circle(_along(c, r, angle, [Vector2(-0.88, 0)])[0], r * 0.13, color)
+		"rate":
+			# A clock whose hand has just swept a quarter turn.
+			draw_colored_polygon(_sector(c, r * 0.8, -PI * 0.5, 0.0), Color(color.r, color.g, color.b, 0.3))
+			draw_arc(c, r * 0.95, 0.0, TAU, 32, color, 2.0, true)
+			for k in 4:
+				var d := Vector2.from_angle(PI * 0.5 * float(k))
+				draw_line(c + d * r * 0.72, c + d * r * 0.95, color, 2.0, true)
+			draw_line(c, c + Vector2(r * 0.72, 0), color, 2.5, true)
+			draw_line(c, c + Vector2.from_angle(-PI * 0.5 - 0.5) * r * 0.5, color, 2.5, true)
+			draw_circle(c, r * 0.13, color)
 		"move":
 			for i in 2:
 				var x := -r * 0.55 + float(i) * r * 0.65
@@ -250,7 +273,13 @@ func _draw_symbol(c: Vector2, r: float, color: Color) -> void:
 			var gs := r * 0.2
 			draw_colored_polygon(PackedVector2Array([g + Vector2(0, -gs), g + Vector2(gs, 0), g + Vector2(0, gs), g + Vector2(-gs, 0)]), color)
 		"max_hp":
-			draw_colored_polygon(_cross(c, r * 0.95, r * 0.34), color)
+			var heart := PackedVector2Array()
+			for k in 40:
+				var t := TAU * float(k) / 40.0
+				var x := 16.0 * pow(sin(t), 3)
+				var y := 13.0 * cos(t) - 5.0 * cos(2.0 * t) - 2.0 * cos(3.0 * t) - cos(4.0 * t)
+				heart.append(c + Vector2(x, -y - 2.0) * r / 16.0)
+			draw_colored_polygon(heart, color)
 		"regen":
 			draw_colored_polygon(_cross(c, r * 0.5, r * 0.18), color)
 			for side in [0.0, PI]:
@@ -286,6 +315,22 @@ func _draw_symbol(c: Vector2, r: float, color: Color) -> void:
 			for side in [-1.0, 1.0]:
 				var x: float = side * r * 0.62
 				draw_polyline(PackedVector2Array([c + Vector2(x, -r * 0.6), c + Vector2(x + side * r * 0.4, 0), c + Vector2(x, r * 0.6)]), color, 2.5, true)
+
+
+# Points given as (along, across) in units of r, laid along the direction `angle` from c.
+func _along(c: Vector2, r: float, angle: float, points: Array) -> PackedVector2Array:
+	var dir := Vector2.from_angle(angle)
+	var out := PackedVector2Array()
+	for p: Vector2 in points:
+		out.append(c + dir * p.x * r + dir.orthogonal() * p.y * r)
+	return out
+
+
+func _sector(c: Vector2, r: float, from: float, to: float) -> PackedVector2Array:
+	var points := PackedVector2Array([c])
+	for k in 9:
+		points.append(c + Vector2.from_angle(lerpf(from, to, float(k) / 8.0)) * r)
+	return points
 
 
 # A plus sign as a single 12-point outline.
