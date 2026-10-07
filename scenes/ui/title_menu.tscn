@@ -20,51 +20,51 @@ theme = ExtResource("2_theme")
 [node name="HiScore" type="Label" parent="Root"]
 visible = false
 layout_mode = 0
-offset_top = 352.0
+offset_top = 318.0
 offset_right = 1280.0
-offset_bottom = 382.0
+offset_bottom = 348.0
 theme_override_colors/font_color = Color(1, 0.85, 0.35, 1)
 theme_override_font_sizes/font_size = 20
 text = "HI-SCORE  0"
 horizontal_alignment = 1
 
 [node name="Start" type="Button" parent="Root"]
-custom_minimum_size = Vector2(460, 58)
+custom_minimum_size = Vector2(400, 52)
 layout_mode = 0
-offset_left = 410.0
-offset_top = 392.0
-offset_right = 870.0
-offset_bottom = 450.0
+offset_left = 440.0
+offset_top = 384.0
+offset_right = 840.0
+offset_bottom = 436.0
 focus_mode = 0
 text = "スタート"
 
 [node name="RankingButton" type="Button" parent="Root"]
-custom_minimum_size = Vector2(460, 58)
+custom_minimum_size = Vector2(400, 52)
 layout_mode = 0
-offset_left = 410.0
-offset_top = 460.0
-offset_right = 870.0
-offset_bottom = 518.0
+offset_left = 440.0
+offset_top = 450.0
+offset_right = 840.0
+offset_bottom = 502.0
 focus_mode = 0
 text = "ハイスコア"
 
 [node name="LibraryButton" type="Button" parent="Root"]
-custom_minimum_size = Vector2(460, 58)
+custom_minimum_size = Vector2(400, 52)
 layout_mode = 0
-offset_left = 410.0
-offset_top = 528.0
-offset_right = 870.0
-offset_bottom = 586.0
+offset_left = 440.0
+offset_top = 516.0
+offset_right = 840.0
+offset_bottom = 568.0
 focus_mode = 0
 text = "ライブラリ"
 
 [node name="Quit" type="Button" parent="Root"]
-custom_minimum_size = Vector2(460, 58)
+custom_minimum_size = Vector2(400, 52)
 layout_mode = 0
-offset_left = 410.0
-offset_top = 596.0
-offset_right = 870.0
-offset_bottom = 654.0
+offset_left = 440.0
+offset_top = 582.0
+offset_right = 840.0
+offset_bottom = 634.0
 focus_mode = 0
 text = "終了"
 

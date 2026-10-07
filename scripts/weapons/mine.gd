@@ -109,11 +109,16 @@ func _draw() -> void:
 	for mine in mines:
 		var armed := float(mine["age"]) >= Balance.MINE_ARM_TIME
 		var pulse := 0.75 + 0.25 * sin(_time * 6.0 + float(mine["age"]))
-		# An eight-point star: a friendly, even-sided shape.
-		var star := PackedVector2Array()
-		for k in 8:
-			var r := MINE_SIZE if k % 2 == 0 else MINE_SIZE * 0.5
-			star.append((mine["pos"] as Vector2) + Vector2.from_angle(PI * float(k) / 4.0) * r)
+		# A hexagonal casing (friendly, even-sided) with a fuse stud on each corner and a core that blinks once armed.
+		var pos: Vector2 = mine["pos"]
+		var casing := Palette.regular_polygon(6, MINE_SIZE, PI / 6.0)
+		var inner := Palette.regular_polygon(6, MINE_SIZE * 0.42, PI / 6.0)
+		for i in 6:
+			casing[i] += pos
+			inner[i] += pos
 		var core := Palette.hdr(Palette.MINE, 1.8 * pulse if armed else 0.7)
-		draw_colored_polygon(star, Color(Palette.MINE.r * 0.2, Palette.MINE.g * 0.15, Palette.MINE.b * 0.3, 0.9))
-		draw_polyline(Palette.closed(star), core, 1.5, true)
+		draw_colored_polygon(casing, Color(Palette.MINE.r * 0.2, Palette.MINE.g * 0.15, Palette.MINE.b * 0.3, 0.9))
+		draw_polyline(Palette.closed(casing), core, 1.5, true)
+		draw_colored_polygon(inner, core)
+		for p in casing:
+			draw_circle(p, 1.6, core)

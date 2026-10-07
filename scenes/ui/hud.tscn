@@ -23,34 +23,110 @@ theme = ExtResource("2_theme")
 [node name="Shade" type="ColorRect" parent="Root"]
 layout_mode = 0
 offset_right = 1280.0
-offset_bottom = 84.0
+offset_bottom = 76.0
 mouse_filter = 2
 color = Color(0.02, 0.03, 0.06, 0.72)
 
 [node name="Rule" type="ColorRect" parent="Root"]
 layout_mode = 0
-offset_top = 84.0
+offset_top = 76.0
 offset_right = 1280.0
-offset_bottom = 85.0
+offset_bottom = 77.0
 mouse_filter = 2
 color = Color(0.35, 0.95, 1, 0.45)
 
 [node name="Status" type="Control" parent="Root"]
 layout_mode = 0
 offset_left = 18.0
-offset_top = 2.0
-offset_right = 538.0
-offset_bottom = 82.0
+offset_top = 6.0
+offset_right = 220.0
+offset_bottom = 74.0
 mouse_filter = 2
 script = ExtResource("4_status")
 
+[node name="WeaponIcons" type="Control" parent="Root"]
+layout_mode = 0
+offset_left = 236.0
+offset_top = 18.0
+offset_right = 236.0
+offset_bottom = 18.0
+mouse_filter = 2
+
+[node name="Icon0" type="Control" parent="Root/WeaponIcons"]
+layout_mode = 0
+script = ExtResource("3_icon")
+icon_size = 34.0
+
+[node name="Icon1" type="Control" parent="Root/WeaponIcons"]
+layout_mode = 0
+offset_left = 40.0
+offset_right = 40.0
+script = ExtResource("3_icon")
+icon_size = 34.0
+
+[node name="Icon2" type="Control" parent="Root/WeaponIcons"]
+layout_mode = 0
+offset_left = 80.0
+offset_right = 80.0
+script = ExtResource("3_icon")
+icon_size = 34.0
+
+[node name="Icon3" type="Control" parent="Root/WeaponIcons"]
+layout_mode = 0
+offset_left = 120.0
+offset_right = 120.0
+script = ExtResource("3_icon")
+icon_size = 34.0
+
+[node name="Divider" type="ColorRect" parent="Root"]
+layout_mode = 0
+offset_left = 403.0
+offset_top = 20.0
+offset_right = 404.0
+offset_bottom = 66.0
+mouse_filter = 2
+color = Color(0.35, 0.95, 1, 0.3)
+
+[node name="PassiveIcons" type="Control" parent="Root"]
+layout_mode = 0
+offset_left = 416.0
+offset_top = 18.0
+offset_right = 416.0
+offset_bottom = 18.0
+mouse_filter = 2
+
+[node name="Icon0" type="Control" parent="Root/PassiveIcons"]
+layout_mode = 0
+script = ExtResource("3_icon")
+icon_size = 34.0
+
+[node name="Icon1" type="Control" parent="Root/PassiveIcons"]
+layout_mode = 0
+offset_left = 40.0
+offset_right = 40.0
+script = ExtResource("3_icon")
+icon_size = 34.0
+
+[node name="Icon2" type="Control" parent="Root/PassiveIcons"]
+layout_mode = 0
+offset_left = 80.0
+offset_right = 80.0
+script = ExtResource("3_icon")
+icon_size = 34.0
+
+[node name="Icon3" type="Control" parent="Root/PassiveIcons"]
+layout_mode = 0
+offset_left = 120.0
+offset_right = 120.0
+script = ExtResource("3_icon")
+icon_size = 34.0
 
 [node name="TimeCaption" type="Label" parent="Root"]
 layout_mode = 0
-offset_left = 565.0
-offset_top = 6.0
-offset_right = 715.0
-offset_bottom = 28.0
+offset_left = 580.0
+offset_top = 14.0
+offset_right = 700.0
+offset_bottom = 36.0
 theme_override_colors/font_color = Color(0.7, 0.85, 0.95, 0.75)
 theme_override_font_sizes/font_size = 15
 text = "残り時間"
@@ -58,110 +134,53 @@ horizontal_alignment = 1
 
 [node name="TimeLabel" type="Label" parent="Root"]
 layout_mode = 0
-offset_left = 565.0
-offset_top = 26.0
-offset_right = 715.0
-offset_bottom = 70.0
+offset_left = 580.0
+offset_top = 32.0
+offset_right = 700.0
+offset_bottom = 76.0
 theme_override_font_sizes/font_size = 34
 text = "3:00"
 horizontal_alignment = 1
 
 [node name="ScoreCaption" type="Label" parent="Root"]
 layout_mode = 0
-offset_left = 730.0
-offset_top = 6.0
-offset_right = 870.0
-offset_bottom = 28.0
+offset_left = 740.0
+offset_top = 15.0
+offset_right = 900.0
+offset_bottom = 37.0
 theme_override_colors/font_color = Color(0.7, 0.85, 0.95, 0.75)
 theme_override_font_sizes/font_size = 15
 text = "SCORE"
 
 [node name="ScoreLabel" type="Label" parent="Root"]
 layout_mode = 0
-offset_left = 728.0
-offset_top = 22.0
-offset_right = 868.0
-offset_bottom = 66.0
+offset_left = 738.0
+offset_top = 33.0
+offset_right = 900.0
+offset_bottom = 77.0
 theme_override_colors/font_color = Color(1, 0.88, 0.45, 1)
 theme_override_font_sizes/font_size = 30
 text = "0"
 
-[node name="WeaponIcons" type="Control" parent="Root"]
+[node name="KillsCaption" type="Label" parent="Root"]
 layout_mode = 0
-offset_left = 876.0
-offset_top = 14.0
-offset_right = 876.0
-offset_bottom = 14.0
-mouse_filter = 2
+offset_left = 920.0
+offset_top = 15.0
+offset_right = 1060.0
+offset_bottom = 37.0
+theme_override_colors/font_color = Color(0.7, 0.85, 0.95, 0.75)
+theme_override_font_sizes/font_size = 15
+text = "撃破数"
 
-[node name="Icon0" type="Control" parent="Root/WeaponIcons"]
+[node name="KillsLabel" type="Label" parent="Root"]
 layout_mode = 0
-script = ExtResource("3_icon")
-icon_size = 40.0
-
-[node name="Icon1" type="Control" parent="Root/WeaponIcons"]
-layout_mode = 0
-offset_left = 46.0
-offset_right = 46.0
-script = ExtResource("3_icon")
-icon_size = 40.0
-
-[node name="Icon2" type="Control" parent="Root/WeaponIcons"]
-layout_mode = 0
-offset_left = 92.0
-offset_right = 92.0
-script = ExtResource("3_icon")
-icon_size = 40.0
-
-[node name="Icon3" type="Control" parent="Root/WeaponIcons"]
-layout_mode = 0
-offset_left = 138.0
-offset_right = 138.0
-script = ExtResource("3_icon")
-icon_size = 40.0
-
-[node name="Divider" type="ColorRect" parent="Root"]
-layout_mode = 0
-offset_left = 1066.0
-offset_top = 16.0
-offset_right = 1067.0
-offset_bottom = 68.0
-mouse_filter = 2
-color = Color(0.35, 0.95, 1, 0.3)
-
-[node name="PassiveIcons" type="Control" parent="Root"]
-layout_mode = 0
-offset_left = 1082.0
-offset_top = 14.0
-offset_right = 1082.0
-offset_bottom = 14.0
-mouse_filter = 2
-
-[node name="Icon0" type="Control" parent="Root/PassiveIcons"]
-layout_mode = 0
-script = ExtResource("3_icon")
-icon_size = 40.0
-
-[node name="Icon1" type="Control" parent="Root/PassiveIcons"]
-layout_mode = 0
-offset_left = 46.0
-offset_right = 46.0
-script = ExtResource("3_icon")
-icon_size = 40.0
-
-[node name="Icon2" type="Control" parent="Root/PassiveIcons"]
-layout_mode = 0
-offset_left = 92.0
-offset_right = 92.0
-script = ExtResource("3_icon")
-icon_size = 40.0
-
-[node name="Icon3" type="Control" parent="Root/PassiveIcons"]
-layout_mode = 0
-offset_left = 138.0
-offset_right = 138.0
-script = ExtResource("3_icon")
-icon_size = 40.0
+offset_left = 918.0
+offset_top = 33.0
+offset_right = 1060.0
+offset_bottom = 77.0
+theme_override_colors/font_color = Color(1, 0.55, 0.4, 1)
+theme_override_font_sizes/font_size = 30
+text = "0"
 
 [node name="Hint" type="Label" parent="Root"]
 layout_mode = 0
