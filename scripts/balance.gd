@@ -95,6 +95,20 @@ const MILESTONE_STAGE := 3
 # --- Weapons: each stat array is indexed by level - 1 (Lv1..Lv5); the special keeps Lv5 stats ---
 const STARTING_WEAPON := "blaster"
 const WEAPON_ORDER := ["blaster", "homing", "orbit", "nova", "laser", "wings", "chain", "tesseract", "mine", "drain"]
+# Passives that change each weapon's numbers (shown in the library). Keep in step with damage_of / cooldown_of /
+# area_of and the knockback each weapon passes to take_damage.
+const WEAPON_PASSIVES := {
+	"blaster": ["attack", "rate", "knock"],
+	"homing": ["attack", "rate", "area", "knock"],
+	"orbit": ["attack", "rate", "area", "knock"],
+	"nova": ["attack", "rate", "area", "knock"],
+	"laser": ["attack", "rate", "area", "knock"],
+	"wings": ["attack", "rate", "area", "knock"],
+	"chain": ["attack", "rate", "area", "knock"],
+	"tesseract": ["attack", "rate", "area", "knock"],
+	"mine": ["attack", "rate", "area", "knock"],
+	"drain": ["attack", "rate", "area"],
+}
 const WEAPONS := {
 	"blaster": {
 		"name": "ブラスター",

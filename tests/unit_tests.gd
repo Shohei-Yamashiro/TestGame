@@ -91,6 +91,30 @@ func test_stats_have_library_labels() -> void:
 			check(entry.size() == 3 and str(entry[2]) != "", "%s.%s needs a short library label" % [pair[0], entry[0]])
 
 
+func test_weapon_passives_match_the_weapon_scripts() -> void:
+	for id: String in Balance.WEAPON_ORDER:
+		check(Balance.WEAPON_PASSIVES.has(id), "%s needs its related passives listed" % id)
+		var passives: Array = Balance.WEAPON_PASSIVES.get(id, [])
+		for pid in passives:
+			check(Balance.PASSIVES.has(pid), "%s lists unknown passive %s" % [id, pid])
+		check(passives.has("attack") and passives.has("rate"), "every weapon is scaled by attack and rate: %s" % id)
+		var source := FileAccess.get_file_as_string("res://scripts/weapons/%s.gd" % id)
+		check(source.contains("area_of(") == passives.has("area"), "%s: area listing disagrees with its use of area_of" % id)
+
+
+func test_library_shows_related_passives() -> void:
+	var library = (load("res://scenes/ui/library.tscn") as PackedScene).instantiate()
+	root.add_child(library)
+	library.open()
+	library.show_item("blaster", true)
+	check(library._boosts.get_child_count() == Balance.WEAPON_PASSIVES["blaster"].size(), "blaster should show one badge per related passive")
+	check(library._boost_caption.visible, "the related-passive caption should show for weapons")
+	library._boosts.get_child(0).pressed.emit()
+	check(library.selected == Balance.WEAPON_PASSIVES["blaster"][0], "clicking a badge should open that passive")
+	check(not library._boost_caption.visible, "passives have no related-passive row")
+	library.free()
+
+
 func test_library_lists_every_item() -> void:
 	var library = (load("res://scenes/ui/library.tscn") as PackedScene).instantiate()
 	root.add_child(library)

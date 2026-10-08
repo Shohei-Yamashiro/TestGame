@@ -37,6 +37,7 @@ var level := 0
 # Highlights the pip that the next pick would fill.
 var preview := false
 @export var icon_size := 44.0
+@export var show_pips := true
 
 
 func configure(id: String, weapon: bool, lv: int, show_preview: bool = false) -> void:
@@ -49,7 +50,7 @@ func configure(id: String, weapon: bool, lv: int, show_preview: bool = false) ->
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	custom_minimum_size = Vector2(icon_size, icon_size + 14.0)
+	custom_minimum_size = Vector2(icon_size, icon_size + (14.0 if show_pips else 0.0))
 	size = custom_minimum_size
 
 
@@ -75,7 +76,8 @@ func _draw() -> void:
 	else:
 		draw_polyline(Palette.closed(tile), color.lightened(0.35), 1.5, true)
 	_draw_symbol(c, s * 0.37, GLYPH)
-	_draw_pips(Vector2(s * 0.5, s + 7.0 * _pip_scale()), color.lightened(0.2))
+	if show_pips:
+		_draw_pips(Vector2(s * 0.5, s + 7.0 * _pip_scale()), color.lightened(0.2))
 
 
 # Rounded square for weapons, circle for passives.

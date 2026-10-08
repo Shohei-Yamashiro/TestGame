@@ -180,6 +180,24 @@ offset_bottom = 70.0
 theme_override_colors/font_color = Color(0.6, 0.75, 0.85, 1)
 theme_override_font_sizes/font_size = 16
 
+[node name="BoostCaption" type="Label" parent="Root/Detail"]
+layout_mode = 0
+offset_left = 430.0
+offset_top = 4.0
+offset_right = 690.0
+offset_bottom = 24.0
+theme_override_colors/font_color = Color(0.6, 0.75, 0.85, 1)
+theme_override_font_sizes/font_size = 14
+text = "関連パッシブ"
+horizontal_alignment = 2
+
+[node name="Boosts" type="Control" parent="Root/Detail"]
+layout_mode = 0
+offset_left = 430.0
+offset_top = 28.0
+offset_right = 690.0
+offset_bottom = 66.0
+
 [node name="Desc" type="Label" parent="Root/Detail"]
 layout_mode = 0
 offset_top = 90.0
