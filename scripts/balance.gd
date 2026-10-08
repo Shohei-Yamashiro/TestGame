@@ -48,17 +48,17 @@ const PASSIVES := {
 	"move": {
 		"name": "移動速度",
 		"speed": [230.0, 245.0, 260.0, 275.0, 290.0, 310.0],
-		"stats": [["speed", "移動速度が増加", "移動速度"]],
+		"stats": [["speed", "移動速度が増加", "移動速度倍率"]],
 	},
 	"magnet": {
 		"name": "回収範囲",
 		"magnet": [BASE_MAGNET, 185.0, 230.0, 280.0, 340.0, 420.0],
-		"stats": [["magnet", "経験値と回復アイテムを引き寄せる範囲が拡大", "回収半径"]],
+		"stats": [["magnet", "経験値と回復アイテムを引き寄せる範囲が拡大", "回収範囲倍率"]],
 	},
 	"max_hp": {
 		"name": "最大HP",
 		"max_hp": [PLAYER_MAX_HP, 115, 130, 150, 170, 200],
-		"stats": [["max_hp", "最大HPが増加（増えた分だけ回復）", "最大HP"]],
+		"stats": [["max_hp", "最大HPが増加（増えた分だけ回復）", "最大HP倍率"]],
 	},
 	"regen": {
 		"name": "再生",
@@ -75,7 +75,7 @@ const PASSIVES := {
 		"name": "装甲",
 		# Fraction of incoming damage removed.
 		"armor": [0.0, 0.1, 0.18, 0.26, 0.33, 0.4],
-		"stats": [["armor", "受けるダメージを軽減", "軽減率"]],
+		"stats": [["armor", "受けるダメージを軽減", "被ダメージ倍率"]],
 	},
 	"growth": {
 		"name": "成長",

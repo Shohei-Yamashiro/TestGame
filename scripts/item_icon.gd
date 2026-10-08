@@ -185,12 +185,20 @@ func _draw_symbol(c: Vector2, r: float, color: Color) -> void:
 				var p := head + dir * r * (0.66 + 0.1 * float(k))
 				draw_circle(p, r * 0.04, Color(color.r, color.g, color.b, 0.6))
 		"orbit":
-			draw_arc(c, r * 0.9, 0.0, TAU, 24, Color(color.r, color.g, color.b, 0.6), 1.5, true)
-			draw_circle(c, r * 0.18, color)
-			for i in 4:
-				var p := c + Vector2.from_angle(-PI * 0.5 + TAU * float(i) / 4.0) * r * 0.9
-				var d := r * 0.26
-				draw_colored_polygon(PackedVector2Array([p + Vector2(0, -d), p + Vector2(d, 0), p + Vector2(0, d), p + Vector2(-d, 0)]), color)
+			# Three blades sweeping clockwise, each dragging a fading trail along the orbit.
+			draw_circle(c, r * 0.16, color)
+			var orbit_r := r * 0.82
+			for i in 3:
+				var a := -PI * 0.5 + TAU * float(i) / 3.0
+				for k in 6:
+					var fade := 1.0 - float(k) / 6.0
+					draw_arc(c, orbit_r, a - 0.2 * float(k + 1), a - 0.2 * float(k) + 0.02, 6,
+						Color(color.r, color.g, color.b, 0.75 * fade), 1.0 + 2.2 * fade, true)
+				var p := c + Vector2.from_angle(a) * orbit_r
+				var ahead := Vector2.from_angle(a + PI * 0.5)
+				var out := Vector2.from_angle(a)
+				draw_colored_polygon(PackedVector2Array([p + ahead * r * 0.42, p + out * r * 0.2 - ahead * r * 0.06,
+					p - ahead * r * 0.24, p - out * r * 0.2 - ahead * r * 0.06]), color)
 		"nova":
 			draw_circle(c, r * 0.22, color)
 			draw_arc(c, r * 0.6, 0.0, TAU, 24, color, 2.0, true)

@@ -120,7 +120,8 @@ func _fill_table(id: String, data: Dictionary, is_weapon: bool) -> void:
 		var offset := 0 if is_weapon else 1
 		var texts: Array[String] = []
 		for lv in Balance.MAX_STAGE:
-			texts.append(format_value(key, is_weapon, float(values[lv + offset])))
+			var value := float(values[lv + offset])
+			texts.append(format_value(key, true, value) if is_weapon else passive_text(key, value, float(values[0])))
 		if is_weapon:
 			texts.append(format_value(key, true, lv6_value(id, key, float(values[Balance.MAX_STAGE - 1]))))
 		_add_row(entry[2], Balance.STAT_PASSIVES.get(key, "") if is_weapon else "", texts)
@@ -239,7 +240,20 @@ static func _format_extra(passive_id: String, format: String, value: Variant) ->
 	return "%d" % roundi(float(value))
 
 
-static func format_value(key: String, is_weapon: bool, value: float) -> String:
+# Passives read as a multiplier on the untaken value, oriented so every upgrade raises the number
+# (armor shows the damage still taken, which falls).
+static func passive_text(key: String, value: float, base: float) -> String:
+	match key:
+		"cooldown":
+			return "×%.2f" % (base / value)
+		"armor":
+			return "×%.2f" % (1.0 - value)
+		"regen":
+			return "%.1f" % value
+	return "×%.2f" % (value / base)
+
+
+static func format_value(key: String, _is_weapon: bool, value: float) -> String:
 	match key:
 		"interval":
 			return "%.2f" % (1.0 / value)
@@ -249,14 +263,4 @@ static func format_value(key: String, is_weapon: bool, value: float) -> String:
 			return "%d%%" % roundi(value * 100.0)
 		"max":
 			return "%d個" % roundi(value)
-		"armor":
-			return "-%d%%" % roundi(value * 100.0)
-		"regen":
-			return "%.1f" % value
-		"cooldown":
-			return "×%.2f" % (1.0 / value)
-		"area", "xp", "knock":
-			return "×%.2f" % value
-		"damage":
-			return ("%d" % roundi(value)) if is_weapon else ("×%.2f" % value)
 	return "%d" % roundi(value)

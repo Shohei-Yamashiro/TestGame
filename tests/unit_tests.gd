@@ -204,10 +204,11 @@ func test_library_lists_every_item() -> void:
 func test_library_value_format() -> void:
 	var Library := load("res://scripts/ui/library.gd")
 	check(Library.format_value("interval", true, 0.25) == "4.00", "intervals should read as attacks per second")
-	check(Library.format_value("cooldown", false, 0.8) == "×1.25", "the rate passive should read as a speed boost")
-	check(Library.format_value("armor", false, 0.06) == "-6%", "armor format")
 	check(Library.format_value("damage", true, 25.0) == "25", "weapon damage format")
-	check(Library.format_value("damage", false, 1.2) == "×1.20", "passive damage format")
+	check(Library.passive_text("damage", 1.2, 1.0) == "×1.20", "passive damage format")
+	check(Library.passive_text("cooldown", 0.8, 1.0) == "×1.25", "the rate passive should read as a speed boost")
+	check(Library.passive_text("armor", 0.1, 0.0) == "×0.90", "armor should read as the damage still taken")
+	check(Library.passive_text("speed", 253.0, 230.0) == "×1.10", "real stats should read relative to the untaken value")
 	check(Library.format_value("radius", true, 110.0) == "110", "plain number format")
 
 
