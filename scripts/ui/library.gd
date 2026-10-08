@@ -249,7 +249,7 @@ static func passive_text(key: String, value: float, base: float) -> String:
 		"armor":
 			return "×%.2f" % (1.0 - value)
 		"regen":
-			return "%.1f" % value
+			return "%.1f%%" % (value * 100.0)
 	return "×%.2f" % (value / base)
 
 

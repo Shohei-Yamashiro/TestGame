@@ -57,7 +57,7 @@ func _regenerate(delta: float) -> void:
 	if regen <= 0.0 or hp >= max_hp:
 		_regen_carry = 0.0
 		return
-	_regen_carry += regen * delta
+	_regen_carry += regen * float(max_hp) * delta
 	if _regen_carry >= 1.0:
 		var amount := int(_regen_carry)
 		_regen_carry -= float(amount)

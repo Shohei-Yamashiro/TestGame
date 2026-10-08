@@ -62,9 +62,9 @@ const PASSIVES := {
 	},
 	"regen": {
 		"name": "再生",
-		# HP per second.
-		"regen": [0.0, 0.4, 0.7, 1.0, 1.4, 1.8],
-		"stats": [["regen", "HPが少しずつ回復", "毎秒回復量"]],
+		# Fraction of max HP restored per second, so it grows with the max HP passive.
+		"regen": [0.0, 0.004, 0.007, 0.01, 0.014, 0.018],
+		"stats": [["regen", "毎秒、最大HPの一定割合を回復", "毎秒の回復割合"]],
 	},
 	"area": {
 		"name": "効果範囲",

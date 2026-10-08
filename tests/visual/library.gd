@@ -47,7 +47,7 @@ func _process(_delta: float) -> bool:
 	if frame == 100:
 		_shot("9_pause.png")
 		game._open_library()
-		game.library_layer.show_item("armor", false)
+		game.library_layer.show_item("regen", false)
 	if frame == 110:
 		_shot("10_library_passive.png")
 		return true

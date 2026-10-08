@@ -209,6 +209,7 @@ func test_library_value_format() -> void:
 	check(Library.passive_text("cooldown", 0.8, 1.0) == "×1.25", "the rate passive should read as a speed boost")
 	check(Library.passive_text("armor", 0.1, 0.0) == "×0.90", "armor should read as the damage still taken")
 	check(Library.passive_text("speed", 253.0, 230.0) == "×1.10", "real stats should read relative to the untaken value")
+	check(Library.passive_text("regen", 0.004, 0.0) == "0.4%", "regen should read as a share of max hp")
 	check(Library.format_value("radius", true, 110.0) == "110", "plain number format")
 
 
@@ -896,7 +897,7 @@ func test_armor_reduces_damage_but_not_below_one() -> void:
 func test_regen_banks_fractions() -> void:
 	var game = _new_game()
 	var p = game.player
-	p.regen = 0.5
+	p.regen = 0.5 / float(p.max_hp)
 	p.hp = 50
 	for i in 60:
 		p._regenerate(1.0 / 60.0)
@@ -907,6 +908,12 @@ func test_regen_banks_fractions() -> void:
 	p.hp = p.max_hp
 	p._regenerate(10.0)
 	check(p.hp == p.max_hp, "regen must not exceed max hp")
+	p.max_hp *= 2
+	p.hp = 50
+	p._regen_carry = 0.0
+	for i in 60:
+		p._regenerate(1.0 / 60.0)
+	check(p.hp == 51, "regen is a share of max hp, so doubling max hp should double it, hp=%d" % p.hp)
 	game.free()
 
 
