@@ -43,28 +43,28 @@ const PASSIVES := {
 	"rate": {
 		"name": "攻撃速度",
 		"cooldown": [1.0, 0.9, 0.82, 0.75, 0.68, 0.62],
-		"stats": [["cooldown", "全武器の攻撃間隔が短縮", "攻撃間隔倍率"]],
+		"stats": [["cooldown", "全武器の攻撃速度が上昇", "攻撃速度倍率"]],
 	},
 	"move": {
 		"name": "移動速度",
 		"speed": [230.0, 245.0, 260.0, 275.0, 290.0, 310.0],
-		"stats": [["speed", "移動速度が増加", "移動速度"]],
+		"stats": [["speed", "移動速度が増加", "移動速度倍率"]],
 	},
 	"magnet": {
 		"name": "回収範囲",
 		"magnet": [BASE_MAGNET, 185.0, 230.0, 280.0, 340.0, 420.0],
-		"stats": [["magnet", "経験値と回復アイテムを引き寄せる範囲が拡大", "回収半径"]],
+		"stats": [["magnet", "経験値と回復アイテムを引き寄せる範囲が拡大", "回収範囲倍率"]],
 	},
 	"max_hp": {
 		"name": "最大HP",
 		"max_hp": [PLAYER_MAX_HP, 115, 130, 150, 170, 200],
-		"stats": [["max_hp", "最大HPが増加（増えた分だけ回復）", "最大HP"]],
+		"stats": [["max_hp", "最大HPが増加（増えた分だけ回復）", "最大HP倍率"]],
 	},
 	"regen": {
 		"name": "再生",
-		# HP per second.
-		"regen": [0.0, 0.4, 0.7, 1.0, 1.4, 1.8],
-		"stats": [["regen", "HPが少しずつ回復", "毎秒回復量"]],
+		# Fraction of max HP restored per second, so it grows with the max HP passive.
+		"regen": [0.0, 0.004, 0.007, 0.01, 0.014, 0.018],
+		"stats": [["regen", "毎秒、最大HPの一定割合を回復", "毎秒の回復割合"]],
 	},
 	"area": {
 		"name": "効果範囲",
@@ -75,7 +75,7 @@ const PASSIVES := {
 		"name": "装甲",
 		# Fraction of incoming damage removed.
 		"armor": [0.0, 0.1, 0.18, 0.26, 0.33, 0.4],
-		"stats": [["armor", "受けるダメージを軽減", "軽減率"]],
+		"stats": [["armor", "受けるダメージを軽減", "被ダメージ倍率"]],
 	},
 	"growth": {
 		"name": "成長",
@@ -101,7 +101,7 @@ const WEAPONS := {
 		"desc": "一番近い敵へ弾を連射する",
 		"damage": [10, 13, 16, 20, 25],
 		"interval": [0.30, 0.27, 0.24, 0.21, 0.18],
-		"stats": [["damage", "ダメージが増加", "ダメージ"], ["interval", "攻撃間隔が短縮", "攻撃間隔"]],
+		"stats": [["damage", "ダメージが増加", "ダメージ"], ["interval", "攻撃速度が上昇", "攻撃速度（/秒）"]],
 		"milestone": "マルチロック",
 		"milestone_desc": "近い敵を2体まで同時に狙って撃つ",
 		"special": "3連ロック・貫通弾",
@@ -113,7 +113,7 @@ const WEAPONS := {
 		"damage": [6, 8, 9, 11, 13],
 		"count": [3, 3, 4, 4, 5],
 		"interval": [1.4, 1.3, 1.2, 1.1, 1.0],
-		"stats": [["damage", "ダメージが増加", "ダメージ"], ["count", "発射数が増加", "発射数"], ["interval", "攻撃間隔が短縮", "攻撃間隔"]],
+		"stats": [["damage", "ダメージが増加", "ダメージ"], ["count", "発射数が増加", "発射数"], ["interval", "攻撃速度が上昇", "攻撃速度（/秒）"]],
 		"milestone": "貫通ミサイル",
 		"milestone_desc": "ミサイルが敵を2体まで貫通する",
 		"special": "爆裂弾",
@@ -136,7 +136,7 @@ const WEAPONS := {
 		"damage": [8, 10, 13, 16, 20],
 		"radius": [110.0, 120.0, 135.0, 150.0, 165.0],
 		"interval": [3.2, 3.0, 2.8, 2.6, 2.4],
-		"stats": [["damage", "ダメージが増加", "ダメージ"], ["radius", "範囲が拡大", "半径"], ["interval", "攻撃間隔が短縮", "攻撃間隔"]],
+		"stats": [["damage", "ダメージが増加", "ダメージ"], ["radius", "範囲が拡大", "半径"], ["interval", "攻撃速度が上昇", "攻撃速度（/秒）"]],
 		"milestone": "減速波",
 		"milestone_desc": "波に当たった敵の移動速度を一定時間下げる",
 		"special": "電磁シールド",
@@ -149,7 +149,7 @@ const WEAPONS := {
 		"reach": [130.0, 145.0, 160.0, 175.0, 190.0],
 		"interval": [2.0, 1.85, 1.7, 1.55, 1.4],
 		"feathers": [2, 2, 3, 3, 4],
-		"stats": [["damage", "ダメージが増加", "ダメージ"], ["reach", "範囲が拡大", "射程"], ["interval", "攻撃間隔が短縮", "攻撃間隔"], ["feathers", "羽根が増える", "羽根の数"]],
+		"stats": [["damage", "ダメージが増加", "ダメージ"], ["reach", "範囲が拡大", "射程"], ["interval", "攻撃速度が上昇", "攻撃速度（/秒）"], ["feathers", "羽根が増える", "羽根の数"]],
 		"milestone": "前方なぎ払い",
 		"milestone_desc": "羽ばたきの後、翼を振り抜いて前方もなぎ払う",
 		"special": "常時展開",
@@ -161,7 +161,7 @@ const WEAPONS := {
 		"damage": [20, 26, 33, 41, 50],
 		"width": [12.0, 13.0, 15.0, 16.0, 18.0],
 		"interval": [2.0, 1.8, 1.6, 1.45, 1.3],
-		"stats": [["damage", "ダメージが増加", "ダメージ"], ["width", "ビームが太くなる", "太さ"], ["interval", "攻撃間隔が短縮", "攻撃間隔"]],
+		"stats": [["damage", "ダメージが増加", "ダメージ"], ["width", "ビームが太くなる", "太さ"], ["interval", "攻撃速度が上昇", "攻撃速度（/秒）"]],
 		"milestone": "前後レーザー",
 		"milestone_desc": "前と後ろの2方向に同時に照射する",
 		"special": "十字レーザー",
@@ -173,7 +173,7 @@ const WEAPONS := {
 		"damage": [12, 15, 19, 24, 30],
 		"jumps": [3, 3, 4, 4, 5],
 		"interval": [1.6, 1.5, 1.4, 1.3, 1.2],
-		"stats": [["damage", "ダメージが増加", "ダメージ"], ["jumps", "連鎖する数が増加", "連鎖数"], ["interval", "攻撃間隔が短縮", "攻撃間隔"]],
+		"stats": [["damage", "ダメージが増加", "ダメージ"], ["jumps", "連鎖する数が増加", "連鎖数"], ["interval", "攻撃速度が上昇", "攻撃速度（/秒）"]],
 		"milestone": "連鎖強化",
 		"milestone_desc": "連鎖する数が2増える",
 		"special": "放電",
@@ -185,7 +185,7 @@ const WEAPONS := {
 		"damage": [10, 13, 16, 20, 25],
 		"life": [3.0, 3.5, 4.0, 4.5, 5.0],
 		"interval": [2.4, 2.2, 2.0, 1.8, 1.6],
-		"stats": [["damage", "ダメージが増加", "ダメージ"], ["life", "持続時間が伸びる", "持続時間"], ["interval", "発射間隔が短縮", "発射間隔"]],
+		"stats": [["damage", "ダメージが増加", "ダメージ"], ["life", "持続時間が伸びる", "持続時間"], ["interval", "発射速度が上昇", "発射速度（/秒）"]],
 		"milestone": "二重展開",
 		"milestone_desc": "鋭角のV字状に2個同時に放つ",
 		"special": "共鳴",
@@ -198,7 +198,7 @@ const WEAPONS := {
 		"radius": [70.0, 75.0, 80.0, 88.0, 96.0],
 		"interval": [1.2, 1.1, 1.0, 0.9, 0.8],
 		"max": [5, 6, 7, 8, 10],
-		"stats": [["damage", "ダメージが増加", "ダメージ"], ["radius", "爆発範囲が拡大", "爆発半径"], ["interval", "設置間隔が短縮", "設置間隔"],
+		"stats": [["damage", "ダメージが増加", "ダメージ"], ["radius", "爆発範囲が拡大", "爆発半径"], ["interval", "設置速度が上昇", "設置速度（/秒）"],
 			["max", "設置上限が増加", "設置上限"]],
 		"milestone": "炎上",
 		"milestone_desc": "爆発に巻き込んだ敵が数秒間燃え、継続ダメージを受ける",
@@ -211,7 +211,7 @@ const WEAPONS := {
 		"damage": [4, 5, 7, 9, 12],
 		"drain": [0.2, 0.25, 0.3, 0.35, 0.4],
 		"interval": [1.8, 1.7, 1.6, 1.5, 1.4],
-		"stats": [["damage", "ダメージが増加", "ダメージ"], ["drain", "吸収率が上昇", "吸収率"], ["interval", "攻撃間隔が短縮", "攻撃間隔"]],
+		"stats": [["damage", "ダメージが増加", "ダメージ"], ["drain", "吸収率が上昇", "吸収率"], ["interval", "攻撃速度が上昇", "攻撃速度（/秒）"]],
 		"milestone": "二重リンク",
 		"milestone_desc": "最寄りの2体と同時につなぐ",
 		"special": "連鎖吸収",
@@ -283,6 +283,34 @@ const NOVA_SLOW_TIME := 2.0
 const BLASTER_MULTI_RATIO := 0.75
 const REFLECT_SPEED := 1.8
 const REFLECT_DAMAGE_RATIO := 2.0
+# --- Library: which passive scales each weapon number ---
+# Per-level stats boosted by a passive (the rest, like counts, are untouched by passives).
+const STAT_PASSIVES := {"damage": "attack", "interval": "rate", "radius": "area", "reach": "area", "width": "area"}
+# Level stats that change on reaching the special (Lv6): "+N" adds to the Lv5 value, a name reads a constant here.
+const WEAPON_LV6 := {
+	"homing": {"count": "+1"},
+	"orbit": {"count": "+1"},
+	"wings": {"reach": "WINGS_SPECIAL_REACH", "feathers": 4},
+}
+# Fixed numbers outside the level arrays that a passive still scales, shown as extra table rows:
+# [passive, label, Lv1-5 value, Lv6 value, format]. Strings name a constant in this file, "" means "not used
+# at that stage" and null on Lv6 means "same as before". Knockback uses the weapon's own push.
+# Keep in step with each weapon's area_of / cooldown_of / cooldown_mult / take_damage calls.
+const WEAPON_EXTRAS := {
+	"blaster": [["knock", "ノックバック", KNOCKBACK, null, ""]],
+	"homing": [["area", "爆発半径", "", "MISSILE_BLAST_RADIUS", ""], ["knock", "ノックバック", KNOCKBACK, null, ""]],
+	"orbit": [["rate", "ヒット頻度（/秒）", "ORBIT_HIT_COOLDOWN", null, ""], ["rate", "回転数（周/秒）", "ORBIT_SPEED", "ORBIT_SPECIAL_SPEED", "turns"],
+		["area", "回転半径", "ORBIT_RADIUS", "ORBIT_SPECIAL_RADIUS", ""], ["knock", "ノックバック", KNOCKBACK, 26.0, ""]],
+	"nova": [["area", "シールド半径", "", "RING_RADIUS", ""], ["rate", "シールド（/秒）", "", "AURA_TICK", ""], ["knock", "ノックバック", 14.0, null, ""]],
+	"laser": [["knock", "ノックバック", 6.0, null, ""]],
+	"wings": [["rate", "常時展開（/秒）", "", "WINGS_SPECIAL_TICK", ""], ["knock", "ノックバック", 18.0, null, ""]],
+	"chain": [["area", "連鎖距離", "CHAIN_JUMP", null, ""], ["area", "放電半径", "", "CHAIN_DISCHARGE_RADIUS", ""], ["knock", "ノックバック", 4.0, null, ""]],
+	"tesseract": [["area", "大きさ", "TESSERACT_RADIUS", null, ""], ["area", "飛距離", "TESSERACT_RANGE", null, ""], ["knock", "ノックバック", 6.0, null, ""]],
+	"mine": [["area", "感知半径", "MINE_TRIGGER", null, ""], ["area", "延焼半径", "", "MINE_SPREAD_RADIUS", ""], ["knock", "ノックバック", 12.0, null, ""]],
+	"drain": [["area", "つなぐ距離", "DRAIN_RANGE", null, ""], ["area", "切れる距離", "DRAIN_BREAK", null, ""], ["area", "線が移る距離", "", "DRAIN_JUMP", ""]],
+}# Knockback reads as a grade rather than a raw push distance.
+const KNOCK_GRADES := [[8.0, "弱"], [16.0, "中"], [INF, "強"]]
+
 # Gems: value thresholds for each look, and how close idle gems must be to fuse.
 const GEM_TIERS := [1, 3, 8, 20]
 const GEM_MERGE_CELL := 40.0

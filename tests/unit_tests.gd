@@ -4,6 +4,7 @@ extends SceneTree
 # Every method named test_* runs; a failed check is reported and the process exits non-zero.
 # Usage: godot --headless --path <project> -s res://tests/unit_tests.gd
 const Balance := preload("res://scripts/balance.gd")
+const Library := preload("res://scripts/ui/library.gd")
 const Palette := preload("res://scripts/palette.gd")
 const GameScript := preload("res://scripts/game.gd")
 const GemScript := preload("res://scripts/gem.gd")
@@ -91,6 +92,92 @@ func test_stats_have_library_labels() -> void:
 			check(entry.size() == 3 and str(entry[2]) != "", "%s.%s needs a short library label" % [pair[0], entry[0]])
 
 
+# The library's passive rows must mirror what each weapon script actually scales.
+func test_weapon_passive_rows_match_the_weapon_scripts() -> void:
+	var consts := (load("res://scripts/balance.gd") as GDScript).get_script_constant_map()
+	var call := RegEx.create_from_string("(area_of|cooldown_of)\\((.*)")
+	var named := RegEx.create_from_string("Balance\\.([A-Z_]+)")
+	var stat_key := RegEx.create_from_string("stat\\(\"([a-z_]+)\"\\)")
+	for id: String in Balance.WEAPON_ORDER:
+		check(Balance.WEAPON_EXTRAS.has(id), "%s needs its fixed passive rows listed" % id)
+		var listed := {}
+		for entry: Array in Balance.WEAPON_EXTRAS.get(id, []):
+			check(entry.size() == 5, "%s row %s should have 5 fields" % [id, entry[1]])
+			check(Balance.PASSIVES.has(entry[0]), "%s lists unknown passive %s" % [id, entry[0]])
+			for source in [entry[2], entry[3]]:
+				if source is String and source != "":
+					check(consts.has(source), "%s names unknown constant %s" % [id, source])
+					listed[source] = entry[0]
+		for key: String in (Balance.WEAPON_LV6.get(id, {}) as Dictionary):
+			var change: Variant = Balance.WEAPON_LV6[id][key]
+			check(Balance.WEAPONS[id].has(key), "%s Lv6 override names unknown stat %s" % [id, key])
+			if change is String and not (change as String).begins_with("+"):
+				check(consts.has(change), "%s Lv6 override names unknown constant %s" % [id, change])
+				listed[change] = Balance.STAT_PASSIVES.get(key, "")
+		var script := load("res://scripts/weapons/%s.gd" % id) as GDScript
+		var used := {}
+		for line in script.source_code.split("\n"):
+			if line.strip_edges().begins_with("func "):
+				continue
+			# Speeds divide by the rate multiplier directly rather than going through cooldown_of.
+			var passive := ""
+			var scaled := ""
+			var m := call.search(line)
+			if m != null:
+				passive = "area" if m.get_string(1) == "area_of" else "rate"
+				scaled = m.get_string(2)
+			elif line.contains("cooldown_mult"):
+				passive = "rate"
+				scaled = line
+			if passive == "":
+				continue
+			for c in named.search_all(scaled):
+				var name := c.get_string(1)
+				used[name] = true
+				check(listed.get(name, "") == passive, "%s scales %s by %s but the library does not list it" % [id, name, passive])
+			for k in stat_key.search_all(scaled):
+				check(Balance.STAT_PASSIVES.get(k.get_string(1), "") == passive, "%s: stat %s should be marked as %s" % [id, k.get_string(1), passive])
+		for name in listed:
+			check(used.has(name), "%s lists %s but never scales it" % [id, name])
+		var knock_rows := (Balance.WEAPON_EXTRAS.get(id, []) as Array).filter(func(e): return e[0] == "knock")
+		var push: float = float(script.get_script_constant_map().get("KNOCK", Balance.KNOCKBACK))
+		if push <= 0.0:
+			check(knock_rows.is_empty(), "%s never pushes, so it should not list knockback" % id)
+		else:
+			check(knock_rows.size() == 1 and is_equal_approx(float(knock_rows[0][2]), push), "%s knockback row should read %.0f" % [id, push])
+	var orbit_knock: Array = Balance.WEAPON_EXTRAS["orbit"].filter(func(e): return e[0] == "knock")[0]
+	var orbit_script := load("res://scripts/weapons/orbit.gd") as GDScript
+	check(is_equal_approx(float(orbit_knock[3]), float(orbit_script.get_script_constant_map()["SPECIAL_KNOCKBACK"])), "orbit special knockback row is stale")
+	var wings_script := load("res://scripts/weapons/wings.gd") as GDScript
+	check(int(Balance.WEAPON_LV6["wings"]["feathers"]) == (wings_script.get_script_constant_map()["WING_ANGLES"] as Array).size(), "wings Lv6 feather count is stale")
+
+
+func test_library_marks_rows_with_passives() -> void:
+	var library = (load("res://scenes/ui/library.tscn") as PackedScene).instantiate()
+	root.add_child(library)
+	library.open()
+	library.show_item("orbit", true)
+	check(library._table.columns == Balance.SPECIAL_STAGE + 1, "weapon tables should run through the special stage")
+	var damage_row: Control = library._table.get_child(library._table.columns)
+	var badge: Button = damage_row.get_child(0)
+	badge.pressed.emit()
+	check(library.selected == "attack", "clicking the damage row's badge should open the attack passive")
+	check(library._table.columns == Balance.MAX_STAGE + 1, "passive tables stop at their last level")
+	check(Library.lv6_value("orbit", "count", 4.0) == 5.0, "the special's extra blade should show in Lv6")
+	check(Library.lv6_value("wings", "reach", 190.0) == Balance.WINGS_SPECIAL_REACH, "deployed wings reach should show in Lv6")
+	check(Library.lv6_value("blaster", "damage", 25.0) == 25.0, "unchanged stats carry Lv5 into Lv6")
+	var radius := Library.extra_texts(["area", "", "ORBIT_RADIUS", "ORBIT_SPECIAL_RADIUS", ""])
+	check(radius[0] == "78" and radius[Balance.MAX_STAGE] == "112", "fixed rows should switch to the special value in Lv6: %s" % [radius])
+	var blast := Library.extra_texts(["area", "", "", "MISSILE_BLAST_RADIUS", ""])
+	check(blast[0] == "—" and blast[Balance.MAX_STAGE] == "64", "special-only rows should be blank before Lv6: %s" % [blast])
+	var push := Library.extra_texts(["knock", "", 14.0, 26.0, ""])
+	check(push[0] == "中" and push[Balance.MAX_STAGE] == "強", "knockback should read as grades: %s" % [push])
+	check(Library.extra_texts(["knock", "", 6.0, null, ""])[Balance.MAX_STAGE] == "弱", "a null Lv6 keeps the earlier value")
+	check(Library.extra_texts(["rate", "", "ORBIT_HIT_COOLDOWN", null, ""])[0] == "2.00", "rate rows should read as hits per second")
+	check(Library.extra_texts(["rate", "", "ORBIT_SPEED", null, "turns"])[0] == "%.2f" % (Balance.ORBIT_SPEED / TAU), "spin rows should read as turns per second")
+	library.free()
+
+
 func test_library_lists_every_item() -> void:
 	var library = (load("res://scenes/ui/library.tscn") as PackedScene).instantiate()
 	root.add_child(library)
@@ -99,12 +186,14 @@ func test_library_lists_every_item() -> void:
 	check(library._tiles.size() == Balance.WEAPON_ORDER.size() + Balance.PASSIVE_ORDER.size(), "one tile per weapon and passive")
 	for id in Balance.WEAPON_ORDER:
 		library.show_item(id, true)
-		var rows: int = 1 + Balance.WEAPONS[id]["stats"].size()
-		check(library._table.get_child_count() == rows * (Balance.MAX_STAGE + 1), "%s table has the wrong cell count" % id)
-		check(library._special.visible, "%s should show its special" % id)
+		var rows: int = 1 + Balance.WEAPONS[id]["stats"].size() + Balance.WEAPON_EXTRAS[id].size()
+		check(library._table.get_child_count() == rows * (Balance.SPECIAL_STAGE + 1), "%s table has the wrong cell count" % id)
+		check(library._special.is_visible_in_tree(), "%s should show its special" % id)
 	for id in Balance.PASSIVE_ORDER:
 		library.show_item(id, false)
-		check(not library._special.visible, "%s is a passive and has no special" % id)
+		var rows: int = 1 + Balance.PASSIVES[id]["stats"].size()
+		check(library._table.get_child_count() == rows * (Balance.MAX_STAGE + 1), "%s table has the wrong cell count" % id)
+		check(not library._special.is_visible_in_tree(), "%s is a passive and has no special" % id)
 		var pressed = library._group.get_pressed_button()
 		check(pressed != null and pressed.get_meta("item") == id, "the %s tile should be highlighted" % id)
 	library.close()
@@ -114,10 +203,13 @@ func test_library_lists_every_item() -> void:
 
 func test_library_value_format() -> void:
 	var Library := load("res://scripts/ui/library.gd")
-	check(Library.format_value("interval", true, 0.3) == "0.30秒", "interval format")
-	check(Library.format_value("armor", false, 0.06) == "-6%", "armor format")
+	check(Library.format_value("interval", true, 0.25) == "4.00", "intervals should read as attacks per second")
 	check(Library.format_value("damage", true, 25.0) == "25", "weapon damage format")
-	check(Library.format_value("damage", false, 1.2) == "×1.20", "passive damage format")
+	check(Library.passive_text("damage", 1.2, 1.0) == "×1.20", "passive damage format")
+	check(Library.passive_text("cooldown", 0.8, 1.0) == "×1.25", "the rate passive should read as a speed boost")
+	check(Library.passive_text("armor", 0.1, 0.0) == "×0.90", "armor should read as the damage still taken")
+	check(Library.passive_text("speed", 253.0, 230.0) == "×1.10", "real stats should read relative to the untaken value")
+	check(Library.passive_text("regen", 0.004, 0.0) == "0.4%", "regen should read as a share of max hp")
 	check(Library.format_value("radius", true, 110.0) == "110", "plain number format")
 
 
@@ -631,13 +723,16 @@ func test_library_texts_fit_their_boxes() -> void:
 	var layer = (load("res://scenes/ui/library.tscn") as PackedScene).instantiate()
 	root.add_child(layer)
 	var desc: Label = layer.get_node("Root/Detail/Desc")
-	var milestone: Label = layer.get_node("Root/Detail/Milestone")
+	var body: VBoxContainer = layer.get_node("Root/Detail/Body")
+	var milestone: Label = body.get_node("Notes/Milestone")
+	# The two boxes share the body width side by side; the container sets this at runtime.
+	milestone.size = Vector2((body.size.x - 10.0) * 0.5, milestone.size.y)
 	for id in Balance.WEAPON_ORDER:
 		var d: Dictionary = Balance.WEAPONS[id]
 		check(_lines_needed(desc, d["desc"]) <= 2, "library description must fit in two lines: %s" % d["desc"])
 		for pair in [["強化", d["milestone"], d["milestone_desc"]], ["スペシャル", d["special"], d["special_desc"]]]:
 			var text := "Lv6 %s：%s\n%s" % pair
-			check(_lines_needed(milestone, text) <= 3, "library %s box must fit in three lines: %s" % [pair[0], pair[2]])
+			check(_lines_needed(milestone, text) <= 4, "library %s box must fit in four lines: %s" % [pair[0], pair[2]])
 	layer.free()
 
 
@@ -802,7 +897,7 @@ func test_armor_reduces_damage_but_not_below_one() -> void:
 func test_regen_banks_fractions() -> void:
 	var game = _new_game()
 	var p = game.player
-	p.regen = 0.5
+	p.regen = 0.5 / float(p.max_hp)
 	p.hp = 50
 	for i in 60:
 		p._regenerate(1.0 / 60.0)
@@ -813,6 +908,12 @@ func test_regen_banks_fractions() -> void:
 	p.hp = p.max_hp
 	p._regenerate(10.0)
 	check(p.hp == p.max_hp, "regen must not exceed max hp")
+	p.max_hp *= 2
+	p.hp = 50
+	p._regen_carry = 0.0
+	for i in 60:
+		p._regenerate(1.0 / 60.0)
+	check(p.hp == 51, "regen is a share of max hp, so doubling max hp should double it, hp=%d" % p.hp)
 	game.free()
 
 

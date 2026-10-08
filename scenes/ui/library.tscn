@@ -189,32 +189,39 @@ theme_override_colors/font_color = Color(0.75, 0.88, 0.95, 1)
 theme_override_font_sizes/font_size = 19
 autowrap_mode = 3
 
-[node name="Table" type="GridContainer" parent="Root/Detail"]
+[node name="Body" type="VBoxContainer" parent="Root/Detail"]
 layout_mode = 0
-offset_top = 150.0
+offset_top = 146.0
 offset_right = 690.0
-offset_bottom = 300.0
-theme_override_constants/h_separation = 8
-theme_override_constants/v_separation = 2
-columns = 6
+offset_bottom = 494.0
+mouse_filter = 2
+theme_override_constants/separation = 8
 
-[node name="Milestone" type="Label" parent="Root/Detail"]
-layout_mode = 0
-offset_top = 320.0
-offset_right = 690.0
-offset_bottom = 396.0
+[node name="Table" type="GridContainer" parent="Root/Detail/Body"]
+layout_mode = 2
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 0
+columns = 7
+
+[node name="Notes" type="HBoxContainer" parent="Root/Detail/Body"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Milestone" type="Label" parent="Root/Detail/Body/Notes"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 1
 theme_override_colors/font_color = Color(0.55, 0.9, 1, 1)
-theme_override_font_sizes/font_size = 17
+theme_override_font_sizes/font_size = 16
 theme_override_styles/normal = SubResource("StyleBoxFlat_box")
 autowrap_mode = 3
 
-[node name="Special" type="Label" parent="Root/Detail"]
-layout_mode = 0
-offset_top = 406.0
-offset_right = 690.0
-offset_bottom = 482.0
+[node name="Special" type="Label" parent="Root/Detail/Body/Notes"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 1
 theme_override_colors/font_color = Color(1, 0.85, 0.35, 1)
-theme_override_font_sizes/font_size = 17
+theme_override_font_sizes/font_size = 16
 theme_override_styles/normal = SubResource("StyleBoxFlat_box")
 autowrap_mode = 3
 
