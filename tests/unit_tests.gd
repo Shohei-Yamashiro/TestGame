@@ -4,6 +4,7 @@ extends SceneTree
 # Every method named test_* runs; a failed check is reported and the process exits non-zero.
 # Usage: godot --headless --path <project> -s res://tests/unit_tests.gd
 const Balance := preload("res://scripts/balance.gd")
+const Library := preload("res://scripts/ui/library.gd")
 const Palette := preload("res://scripts/palette.gd")
 const GameScript := preload("res://scripts/game.gd")
 const GemScript := preload("res://scripts/gem.gd")
@@ -91,29 +92,64 @@ func test_stats_have_library_labels() -> void:
 			check(entry.size() == 3 and str(entry[2]) != "", "%s.%s needs a short library label" % [pair[0], entry[0]])
 
 
-func test_weapon_passives_match_the_weapon_scripts() -> void:
+# The library's passive rows must mirror what each weapon script actually scales.
+func test_weapon_passive_rows_match_the_weapon_scripts() -> void:
+	var consts := (load("res://scripts/balance.gd") as GDScript).get_script_constant_map()
+	var call := RegEx.create_from_string("(area_of|cooldown_of)\\((.*)")
+	var named := RegEx.create_from_string("Balance\\.([A-Z_]+)")
+	var stat_key := RegEx.create_from_string("stat\\(\"([a-z_]+)\"\\)")
 	for id: String in Balance.WEAPON_ORDER:
-		check(Balance.WEAPON_PASSIVES.has(id), "%s needs its related passives listed" % id)
-		var passives: Array = Balance.WEAPON_PASSIVES.get(id, [])
-		for pid in passives:
-			check(Balance.PASSIVES.has(pid), "%s lists unknown passive %s" % [id, pid])
-		check(passives.has("attack") and passives.has("rate"), "every weapon is scaled by attack and rate: %s" % id)
-		var source := FileAccess.get_file_as_string("res://scripts/weapons/%s.gd" % id)
-		check(source.contains("area_of(") == passives.has("area"), "%s: area listing disagrees with its use of area_of" % id)
+		check(Balance.WEAPON_EXTRAS.has(id), "%s needs its fixed passive rows listed" % id)
+		var listed := {}
+		for entry: Array in Balance.WEAPON_EXTRAS.get(id, []):
+			check(Balance.PASSIVES.has(entry[0]), "%s lists unknown passive %s" % [id, entry[0]])
+			for source in [entry[2], entry[3]]:
+				if source is String and source != "":
+					check(consts.has(source), "%s names unknown constant %s" % [id, source])
+					listed[source] = entry[0]
+		var script := load("res://scripts/weapons/%s.gd" % id) as GDScript
+		var used := {}
+		for line in script.source_code.split("\n"):
+			var m := call.search(line)
+			if m == null or line.strip_edges().begins_with("func "):
+				continue
+			var passive := "area" if m.get_string(1) == "area_of" else "rate"
+			for c in named.search_all(m.get_string(2)):
+				var name := c.get_string(1)
+				used[name] = true
+				check(listed.get(name, "") == passive, "%s scales %s by %s but the library does not list it" % [id, name, passive])
+			for k in stat_key.search_all(m.get_string(2)):
+				check(Balance.STAT_PASSIVES.get(k.get_string(1), "") == passive, "%s: stat %s should be marked as %s" % [id, k.get_string(1), passive])
+		for name in listed:
+			check(used.has(name), "%s lists %s but never scales it" % [id, name])
+		var knock_rows := (Balance.WEAPON_EXTRAS.get(id, []) as Array).filter(func(e): return e[0] == "knock")
+		var push: float = float(script.get_script_constant_map().get("KNOCK", Balance.KNOCKBACK))
+		if push <= 0.0:
+			check(knock_rows.is_empty(), "%s never pushes, so it should not list knockback" % id)
+		else:
+			check(knock_rows.size() == 1 and is_equal_approx(float(knock_rows[0][2]), push), "%s knockback row should read %.0f" % [id, push])
+	var orbit_knock: Array = Balance.WEAPON_EXTRAS["orbit"].filter(func(e): return e[0] == "knock")[0]
+	var orbit_script := load("res://scripts/weapons/orbit.gd") as GDScript
+	check(is_equal_approx(float(orbit_knock[3]), float(orbit_script.get_script_constant_map()["SPECIAL_KNOCKBACK"])), "orbit special knockback row is stale")
 
 
-func test_library_shows_related_passives() -> void:
+func test_library_marks_rows_with_passives() -> void:
 	var library = (load("res://scenes/ui/library.tscn") as PackedScene).instantiate()
 	root.add_child(library)
 	library.open()
-	library.show_item("blaster", true)
-	check(library._boosts.get_child_count() == Balance.WEAPON_PASSIVES["blaster"].size(), "blaster should show one badge per related passive")
-	check(library._boost_caption.visible, "the related-passive caption should show for weapons")
-	library._boosts.get_child(0).pressed.emit()
-	check(library.selected == Balance.WEAPON_PASSIVES["blaster"][0], "clicking a badge should open that passive")
-	check(not library._boost_caption.visible, "passives have no related-passive row")
+	library.show_item("orbit", true)
+	check(library._extras.visible and library._extras.get_child_count() == Balance.WEAPON_EXTRAS["orbit"].size(), "orbit should list its fixed passive rows")
+	var damage_row: Control = library._table.get_child(Balance.MAX_STAGE + 1)
+	var badge: Button = damage_row.get_child(0)
+	badge.pressed.emit()
+	check(library.selected == "attack", "clicking the damage row's badge should open the attack passive")
+	check(not library._extras.visible, "passives have no fixed passive rows")
+	check(Library.extra_text(["area", "", "ORBIT_RADIUS", "ORBIT_SPECIAL_RADIUS"]) == "78（Lv6: 112）", "base and special values should read together")
+	check(Library.extra_text(["area", "", "", "MISSILE_BLAST_RADIUS"]) == "Lv6: 64", "special-only rows should name the level")
+	check(Library.extra_text(["knock", "", 6.0, null]) == "弱", "light pushes should read as weak")
+	check(Library.extra_text(["knock", "", 14.0, 26.0]) == "中（Lv6: 強）", "knockback grades should show the special jump")
+	check(Library.extra_text(["rate", "", "ORBIT_HIT_COOLDOWN", ""]) == "0.50秒", "rate rows should read as seconds")
 	library.free()
-
 
 func test_library_lists_every_item() -> void:
 	var library = (load("res://scenes/ui/library.tscn") as PackedScene).instantiate()
@@ -655,7 +691,10 @@ func test_library_texts_fit_their_boxes() -> void:
 	var layer = (load("res://scenes/ui/library.tscn") as PackedScene).instantiate()
 	root.add_child(layer)
 	var desc: Label = layer.get_node("Root/Detail/Desc")
-	var milestone: Label = layer.get_node("Root/Detail/Milestone")
+	var body: VBoxContainer = layer.get_node("Root/Detail/Body")
+	var milestone: Label = body.get_node("Milestone")
+	# The box gets its width from the container at runtime; measure against the full body width.
+	milestone.size = Vector2(body.size.x, milestone.size.y)
 	for id in Balance.WEAPON_ORDER:
 		var d: Dictionary = Balance.WEAPONS[id]
 		check(_lines_needed(desc, d["desc"]) <= 2, "library description must fit in two lines: %s" % d["desc"])

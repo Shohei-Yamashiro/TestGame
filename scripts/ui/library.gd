@@ -9,8 +9,7 @@ const ItemIconScript := preload("res://scripts/item_icon.gd")
 const TILE_SIZE := Vector2(64, 72)
 const TILE_STEP := Vector2(72, 80)
 const TILES_PER_ROW := 5
-const BOOST_SIZE := 34.0
-const BOOST_STEP := 40.0
+const BADGE_SIZE := 22.0
 const LABEL_COLOR := Color(0.6, 0.75, 0.85)
 const VALUE_COLOR := Color(0.96, 0.97, 0.98)
 
@@ -24,11 +23,10 @@ const VALUE_COLOR := Color(0.96, 0.97, 0.98)
 @onready var _name: Label = $Root/Detail/Name
 @onready var _kind: Label = $Root/Detail/Kind
 @onready var _desc: Label = $Root/Detail/Desc
-@onready var _table: GridContainer = $Root/Detail/Table
-@onready var _milestone: Label = $Root/Detail/Milestone
-@onready var _special: Label = $Root/Detail/Special
-@onready var _boost_caption: Label = $Root/Detail/BoostCaption
-@onready var _boosts: Control = $Root/Detail/Boosts
+@onready var _table: GridContainer = $Root/Detail/Body/Table
+@onready var _milestone: Label = $Root/Detail/Body/Milestone
+@onready var _special: Label = $Root/Detail/Body/Special
+@onready var _extras: GridContainer = $Root/Detail/Body/Extras
 
 var _group := ButtonGroup.new()
 var _tiles: Array[Button] = []
@@ -90,39 +88,12 @@ func show_item(id: String, is_weapon: bool) -> void:
 		effects.append(entry[1])
 	_desc.text = data["desc"] if is_weapon else "・".join(effects)
 	_fill_table(data, is_weapon)
-	_fill_boosts(Balance.WEAPON_PASSIVES[id] if is_weapon else [])
+	_fill_extras(Balance.WEAPON_EXTRAS[id] if is_weapon else [])
 	_milestone.visible = is_weapon
 	_special.visible = is_weapon
 	if is_weapon:
 		_milestone.text = "Lv%d 強化：%s\n%s" % [Balance.MILESTONE_STAGE, data["milestone"], data["milestone_desc"]]
 		_special.text = "Lv%d スペシャル：%s\n%s" % [Balance.SPECIAL_STAGE, data["special"], data["special_desc"]]
-
-
-# Badges for the passives that strengthen this weapon, right-aligned; clicking one opens that passive.
-func _fill_boosts(passive_ids: Array) -> void:
-	for child in _boosts.get_children():
-		_boosts.remove_child(child)
-		child.queue_free()
-	_boost_caption.visible = not passive_ids.is_empty()
-	var right := _boosts.size.x
-	for i in passive_ids.size():
-		var pid: String = passive_ids[i]
-		var data: Dictionary = Balance.PASSIVES[pid]
-		var badge := Button.new()
-		badge.flat = true
-		badge.focus_mode = Control.FOCUS_NONE
-		badge.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-		badge.tooltip_text = "%s：%s" % [data["name"], data["stats"][0][1]]
-		badge.size = Vector2(BOOST_SIZE, BOOST_SIZE)
-		badge.position = Vector2(right - BOOST_SIZE - float(passive_ids.size() - 1 - i) * BOOST_STEP, 0)
-		var icon := ItemIconScript.new()
-		icon.icon_size = BOOST_SIZE
-		icon.show_pips = false
-		badge.add_child(icon)
-		icon.configure(pid, false, 0)
-		badge.pressed.connect(show_item.bind(pid, false))
-		badge.set_meta("item", pid)
-		_boosts.add_child(badge)
 
 
 func _fill_table(data: Dictionary, is_weapon: bool) -> void:
@@ -135,11 +106,107 @@ func _fill_table(data: Dictionary, is_weapon: bool) -> void:
 	for entry: Array in data["stats"]:
 		var key: String = entry[0]
 		var values: Array = data[key]
-		_cell(entry[2], LABEL_COLOR, 170.0)
+		_row_label(entry[2], Balance.STAT_PASSIVES.get(key, "") if is_weapon else "")
 		# Weapon arrays start at Lv1; passive arrays carry the untaken value at index 0.
 		var offset := 0 if is_weapon else 1
 		for lv in Balance.MAX_STAGE:
 			_cell(format_value(key, is_weapon, float(values[lv + offset])), VALUE_COLOR, 96.0, HORIZONTAL_ALIGNMENT_RIGHT)
+
+
+# Row name with the badge of the passive that scales it (blank space keeps the names lined up).
+func _row_label(text: String, passive_id: String) -> void:
+	var row := HBoxContainer.new()
+	row.custom_minimum_size = Vector2(170, 30)
+	row.add_theme_constant_override("separation", 6)
+	row.add_child(_badge(passive_id))
+	row.add_child(_label(text, LABEL_COLOR, 18))
+	_table.add_child(row)
+
+
+# Numbers outside the level table that a passive still scales, two to a line.
+func _fill_extras(rows: Array) -> void:
+	for child in _extras.get_children():
+		_extras.remove_child(child)
+		child.queue_free()
+	_extras.visible = not rows.is_empty()
+	for entry: Array in rows:
+		var cell := HBoxContainer.new()
+		cell.custom_minimum_size = Vector2(336, 28)
+		cell.add_theme_constant_override("separation", 6)
+		cell.add_child(_badge(entry[0]))
+		var name_label := _label(entry[1], LABEL_COLOR, 17)
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		cell.add_child(name_label)
+		cell.add_child(_label(extra_text(entry), VALUE_COLOR, 17))
+		_extras.add_child(cell)
+
+
+# A small passive icon; hovering names the passive and clicking opens it. An empty id leaves a gap.
+func _badge(passive_id: String) -> Control:
+	if passive_id == "":
+		var gap := Control.new()
+		gap.custom_minimum_size = Vector2(BADGE_SIZE, BADGE_SIZE)
+		return gap
+	var data: Dictionary = Balance.PASSIVES[passive_id]
+	var badge := Button.new()
+	badge.flat = true
+	badge.focus_mode = Control.FOCUS_NONE
+	badge.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	badge.tooltip_text = "%s：%s" % [data["name"], data["stats"][0][1]]
+	badge.custom_minimum_size = Vector2(BADGE_SIZE, BADGE_SIZE)
+	badge.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var icon := ItemIconScript.new()
+	icon.icon_size = BADGE_SIZE
+	icon.show_pips = false
+	badge.add_child(icon)
+	icon.configure(passive_id, false, 0)
+	badge.pressed.connect(show_item.bind(passive_id, false))
+	badge.set_meta("item", passive_id)
+	return badge
+
+
+func _label(text: String, color: Color, font_size: int) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	return label
+
+
+# "78", "Lv6: 215" or "78（Lv6: 112）"; knockback reads as a grade.
+static func extra_text(entry: Array) -> String:
+	var base: Variant = _extra_number(entry[2])
+	var special: Variant = _extra_number(entry[3])
+	var base_text := _format_extra(entry[0], base)
+	var special_text := _format_extra(entry[0], special)
+	if base == null:
+		return "Lv%d: %s" % [Balance.SPECIAL_STAGE, special_text]
+	if special == null or special_text == base_text:
+		return base_text
+	return "%s（Lv%d: %s）" % [base_text, Balance.SPECIAL_STAGE, special_text]
+
+
+# Entries hold either a number or the name of a balance constant; "" and null mean "not at this stage".
+static func _extra_number(source: Variant) -> Variant:
+	if source == null or (source is String and source == ""):
+		return null
+	if source is String:
+		return float((load("res://scripts/balance.gd") as GDScript).get_script_constant_map()[source])
+	return float(source)
+
+
+static func _format_extra(passive_id: String, value: Variant) -> String:
+	if value == null:
+		return ""
+	match passive_id:
+		"knock":
+			for grade: Array in Balance.KNOCK_GRADES:
+				if float(value) < float(grade[0]):
+					return grade[1]
+		"rate":
+			return "%.2f秒" % float(value)
+	return "%d" % roundi(float(value))
 
 
 func _cell(text: String, color: Color, width: float, align := HORIZONTAL_ALIGNMENT_LEFT) -> void:

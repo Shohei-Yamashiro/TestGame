@@ -95,20 +95,6 @@ const MILESTONE_STAGE := 3
 # --- Weapons: each stat array is indexed by level - 1 (Lv1..Lv5); the special keeps Lv5 stats ---
 const STARTING_WEAPON := "blaster"
 const WEAPON_ORDER := ["blaster", "homing", "orbit", "nova", "laser", "wings", "chain", "tesseract", "mine", "drain"]
-# Passives that change each weapon's numbers (shown in the library). Keep in step with damage_of / cooldown_of /
-# area_of and the knockback each weapon passes to take_damage.
-const WEAPON_PASSIVES := {
-	"blaster": ["attack", "rate", "knock"],
-	"homing": ["attack", "rate", "area", "knock"],
-	"orbit": ["attack", "rate", "area", "knock"],
-	"nova": ["attack", "rate", "area", "knock"],
-	"laser": ["attack", "rate", "area", "knock"],
-	"wings": ["attack", "rate", "area", "knock"],
-	"chain": ["attack", "rate", "area", "knock"],
-	"tesseract": ["attack", "rate", "area", "knock"],
-	"mine": ["attack", "rate", "area", "knock"],
-	"drain": ["attack", "rate", "area"],
-}
 const WEAPONS := {
 	"blaster": {
 		"name": "ブラスター",
@@ -297,6 +283,29 @@ const NOVA_SLOW_TIME := 2.0
 const BLASTER_MULTI_RATIO := 0.75
 const REFLECT_SPEED := 1.8
 const REFLECT_DAMAGE_RATIO := 2.0
+# --- Library: which passive scales each weapon number ---
+# Per-level stats boosted by a passive (the rest, like counts, are untouched by passives).
+const STAT_PASSIVES := {"damage": "attack", "interval": "rate", "radius": "area", "reach": "area", "width": "area"}
+# Fixed numbers outside the level table that a passive still scales: [passive, label, base, value from Lv6].
+# Strings name a constant in this file (empty when the row only exists from Lv6); knockback uses the
+# weapon's own push. Keep in step with each weapon's area_of / cooldown_of / take_damage calls.
+const WEAPON_EXTRAS := {
+	"blaster": [["knock", "ノックバック", KNOCKBACK, null]],
+	"homing": [["area", "爆発半径", "", "MISSILE_BLAST_RADIUS"], ["knock", "ノックバック", KNOCKBACK, null]],
+	"orbit": [["rate", "同じ敵へのヒット間隔", "ORBIT_HIT_COOLDOWN", ""], ["area", "回転半径", "ORBIT_RADIUS", "ORBIT_SPECIAL_RADIUS"],
+		["knock", "ノックバック", KNOCKBACK, 26.0]],
+	"nova": [["area", "シールド半径", "", "RING_RADIUS"], ["rate", "シールドの攻撃間隔", "", "AURA_TICK"], ["knock", "ノックバック", 14.0, null]],
+	"laser": [["knock", "ノックバック", 6.0, null]],
+	"wings": [["area", "常時展開の射程", "", "WINGS_SPECIAL_REACH"], ["rate", "常時展開の攻撃間隔", "", "WINGS_SPECIAL_TICK"],
+		["knock", "ノックバック", 18.0, null]],
+	"chain": [["area", "連鎖距離", "CHAIN_JUMP", ""], ["area", "放電半径", "", "CHAIN_DISCHARGE_RADIUS"], ["knock", "ノックバック", 4.0, null]],
+	"tesseract": [["area", "大きさ（半径）", "TESSERACT_RADIUS", ""], ["area", "飛距離", "TESSERACT_RANGE", ""], ["knock", "ノックバック", 6.0, null]],
+	"mine": [["area", "感知半径", "MINE_TRIGGER", ""], ["area", "延焼半径", "", "MINE_SPREAD_RADIUS"], ["knock", "ノックバック", 12.0, null]],
+	"drain": [["area", "つなぐ距離", "DRAIN_RANGE", ""], ["area", "切れる距離", "DRAIN_BREAK", ""], ["area", "線が移る距離", "", "DRAIN_JUMP"]],
+}
+# Knockback reads as a grade rather than a raw push distance.
+const KNOCK_GRADES := [[8.0, "弱"], [16.0, "中"], [INF, "強"]]
+
 # Gems: value thresholds for each look, and how close idle gems must be to fuse.
 const GEM_TIERS := [1, 3, 8, 20]
 const GEM_MERGE_CELL := 40.0
