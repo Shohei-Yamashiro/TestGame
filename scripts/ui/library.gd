@@ -235,14 +235,14 @@ static func _format_extra(passive_id: String, format: String, value: Variant) ->
 				if float(value) < float(grade[0]):
 					return grade[1]
 		"rate":
-			return "%.2f秒" % float(value)
+			return "%.2f" % (1.0 / float(value))
 	return "%d" % roundi(float(value))
 
 
 static func format_value(key: String, is_weapon: bool, value: float) -> String:
 	match key:
 		"interval":
-			return "%.2f秒" % value
+			return "%.2f" % (1.0 / value)
 		"life":
 			return "%.1f秒" % value
 		"drain":
@@ -253,7 +253,9 @@ static func format_value(key: String, is_weapon: bool, value: float) -> String:
 			return "-%d%%" % roundi(value * 100.0)
 		"regen":
 			return "%.1f" % value
-		"cooldown", "area", "xp", "knock":
+		"cooldown":
+			return "×%.2f" % (1.0 / value)
+		"area", "xp", "knock":
 			return "×%.2f" % value
 		"damage":
 			return ("%d" % roundi(value)) if is_weapon else ("×%.2f" % value)

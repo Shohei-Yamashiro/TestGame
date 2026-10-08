@@ -173,7 +173,7 @@ func test_library_marks_rows_with_passives() -> void:
 	var push := Library.extra_texts(["knock", "", 14.0, 26.0, ""])
 	check(push[0] == "中" and push[Balance.MAX_STAGE] == "強", "knockback should read as grades: %s" % [push])
 	check(Library.extra_texts(["knock", "", 6.0, null, ""])[Balance.MAX_STAGE] == "弱", "a null Lv6 keeps the earlier value")
-	check(Library.extra_texts(["rate", "", "ORBIT_HIT_COOLDOWN", null, ""])[0] == "0.50秒", "rate rows should read as seconds")
+	check(Library.extra_texts(["rate", "", "ORBIT_HIT_COOLDOWN", null, ""])[0] == "2.00", "rate rows should read as hits per second")
 	check(Library.extra_texts(["rate", "", "ORBIT_SPEED", null, "turns"])[0] == "%.2f" % (Balance.ORBIT_SPEED / TAU), "spin rows should read as turns per second")
 	library.free()
 
@@ -203,7 +203,8 @@ func test_library_lists_every_item() -> void:
 
 func test_library_value_format() -> void:
 	var Library := load("res://scripts/ui/library.gd")
-	check(Library.format_value("interval", true, 0.3) == "0.30秒", "interval format")
+	check(Library.format_value("interval", true, 0.25) == "4.00", "intervals should read as attacks per second")
+	check(Library.format_value("cooldown", false, 0.8) == "×1.25", "the rate passive should read as a speed boost")
 	check(Library.format_value("armor", false, 0.06) == "-6%", "armor format")
 	check(Library.format_value("damage", true, 25.0) == "25", "weapon damage format")
 	check(Library.format_value("damage", false, 1.2) == "×1.20", "passive damage format")
