@@ -56,6 +56,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _emit_wave() -> void:
+	Audio.sfx("nova")
 	_waves.append({
 		"center": player.global_position,
 		"radius": area_of(stat("radius")),

@@ -71,6 +71,8 @@ func _physics_process(delta: float) -> void:
 		var open := _flare > 0.0 or _sweep_delay > 0.0 or _sweep_t >= 0.0
 		_deploy = move_toward(_deploy, 1.0 if open else 0.0, delta * (10.0 if open else 2.5))
 	_update_sweep(delta)
+	if _deploy > 0.0:
+		Audio.loop("wings_hum", _deploy)
 	if _deploy > 0.3:
 		_mote_cd -= delta
 		if _mote_cd <= 0.0 and fx:
@@ -83,6 +85,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _start_sweep() -> void:
+	Audio.sfx("swoosh")
 	_sweep_t = 0.0
 
 

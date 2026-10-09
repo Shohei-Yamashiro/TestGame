@@ -55,12 +55,14 @@ func place(at: Vector2) -> void:
 	while mines.size() >= max_mines():
 		mines.remove_at(0)
 	mines.append({"pos": at, "age": 0.0})
+	Audio.sfx("place")
 
 
 func detonate(at: Vector2) -> void:
 	var damage := damage_of(stat("damage"))
 	var burn := maxi(1, int(round(float(damage) * Balance.MINE_BURN_RATIO)))
 	var spread := area_of(Balance.MINE_SPREAD_RADIUS) if is_special() else 0.0
+	Audio.sfx("explode")
 	for enemy in enemies_in_circle(at, _blast_radius()):
 		if is_milestone():
 			enemy.apply_burn(burn, Balance.MINE_BURN_TIME, spread)

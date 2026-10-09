@@ -30,6 +30,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _fire(aim: Vector2) -> void:
+	Audio.sfx("laser")
 	var count := 4 if is_special() else (2 if is_milestone() else 1)
 	var origin := player.global_position
 	var width := area_of(stat("width"))

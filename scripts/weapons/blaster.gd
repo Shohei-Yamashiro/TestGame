@@ -15,6 +15,7 @@ func _physics_process(delta: float) -> void:
 		return
 	_cd = cooldown_of(stat("interval"))
 	var ratio := Balance.BLASTER_MULTI_RATIO if locks == 2 else 1.0
+	Audio.sfx("shot")
 	for i in locks:
 		# With fewer enemies than locks, the spare shots double up on the closest ones.
 		var target: Node2D = targets[i % targets.size()]

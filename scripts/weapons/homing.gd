@@ -34,6 +34,7 @@ func _physics_process(delta: float) -> void:
 # Untyped on purpose: queued targets may have been freed before their turn to launch.
 func _launch(queued) -> void:
 	var target: Node2D = queued if is_instance_valid(queued) and queued.alive else null
+	Audio.sfx("missile")
 	var aim := player.facing
 	if target != null:
 		aim = (target.global_position - player.global_position).normalized()

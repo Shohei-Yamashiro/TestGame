@@ -11,6 +11,8 @@ const GemScript := preload("res://scripts/gem.gd")
 const ScoreStore := preload("res://scripts/score_store.gd")
 const CameraRig := preload("res://scripts/camera_rig.gd")
 const ItemIconScript := preload("res://scripts/item_icon.gd")
+const AudioScript := preload("res://scripts/audio.gd")
+const Synth := preload("res://tools/audio/synth.gd")
 
 var _current := ""
 var _failures: Array[String] = []
@@ -989,3 +991,86 @@ func test_gem_tiers_are_ascending() -> void:
 	check(Balance.GEM_TIERS.size() == Palette.GEM_TIERS.size(), "GEM_TIERS and palette sizes differ")
 	for i in range(1, Balance.GEM_TIERS.size()):
 		check(Balance.GEM_TIERS[i] > Balance.GEM_TIERS[i - 1], "GEM_TIERS not ascending at %d" % i)
+
+
+# --- Audio ---
+
+func test_audio_files_are_imported() -> void:
+	for sound: String in AudioScript.SOUNDS:
+		var stream := load(AudioScript.SFX_DIR + sound + ".wav") as AudioStreamWAV
+		check(stream != null, "sfx %s is missing (run tools/audio/generate_audio.gd)" % sound)
+		if stream != null:
+			check(stream.loop_mode == AudioStreamWAV.LOOP_DISABLED, "sfx %s should not loop" % sound)
+		check(AudioScript.SOUNDS[sound].size() == 4, "SOUNDS.%s needs [db, gap, voices, jitter]" % sound)
+	for sound: String in AudioScript.LOOPS:
+		var stream := load(AudioScript.SFX_DIR + sound + ".wav") as AudioStreamWAV
+		check(stream != null, "loop %s is missing" % sound)
+		if stream != null:
+			check(stream.loop_mode != AudioStreamWAV.LOOP_DISABLED, "loop %s should loop" % sound)
+	for track: String in AudioScript.MUSIC:
+		var stream := load(AudioScript.BGM_DIR + track + ".wav") as AudioStreamWAV
+		check(stream != null, "bgm %s is missing" % track)
+		if stream != null:
+			check(stream.loop_mode != AudioStreamWAV.LOOP_DISABLED, "bgm %s should loop" % track)
+
+
+func test_audio_throttles_repeats() -> void:
+	var audio = AudioScript.new()
+	root.add_child(audio)
+	audio.play("kill")
+	audio.play("kill")
+	check(audio._last.has("kill"), "kill should have played")
+	check(audio._voices.get("kill", []).size() <= 1, "a repeat inside min_gap should be dropped")
+	audio._gem_last = audio._now()
+	audio._gem_combo = AudioScript.GEM_COMBO_STEPS
+	audio.gem()
+	check(audio._gem_combo == AudioScript.GEM_COMBO_STEPS, "gem combo should cap at %d" % AudioScript.GEM_COMBO_STEPS)
+	audio._gem_last -= AudioScript.GEM_COMBO_GAP + 0.1
+	audio.gem()
+	check(audio._gem_combo == 0, "gem combo should reset after a gap")
+	audio.free()
+	AudioScript.sfx("kill")
+	check(AudioScript._current == null, "sfx should be a no-op once the Audio node is gone")
+
+
+func test_audio_loop_fades_when_released() -> void:
+	var audio = AudioScript.new()
+	root.add_child(audio)
+	audio.hold_loop("wings_hum", 0.6)
+	audio._process(1.0)
+	check(is_equal_approx(audio.loop_level("wings_hum"), 0.6), "held loop should reach its level, got %.2f" % audio.loop_level("wings_hum"))
+	audio._loops["wings_hum"]["seen"] -= AudioScript.LOOP_HOLD + 0.1
+	audio._process(1.0)
+	check(audio.loop_level("wings_hum") == 0.0, "a loop nobody holds should fade out")
+	audio.hold_loop("nope", 1.0)
+	check(not audio._loops.has("nope"), "unknown loops are ignored")
+	audio.free()
+
+
+func test_audio_music_switching() -> void:
+	var audio = AudioScript.new()
+	root.add_child(audio)
+	audio.play_music("title")
+	check(audio.music_track() == "title", "title music should be playing")
+	audio.play_music("nope")
+	check(audio.music_track() == "title", "unknown tracks are ignored")
+	audio.stop_music()
+	check(audio.music_track() == "", "stop_music should clear the track")
+	audio.free()
+
+
+func test_synth_writes_looping_wav() -> void:
+	var a := Synth.new(8000, 3)
+	var b := Synth.new(8000, 3)
+	var buf := a.tone(Synth.Wave.NOISE, 0.05, 2000.0)
+	check(buf == b.tone(Synth.Wave.NOISE, 0.05, 2000.0), "same seed should synthesize the same samples")
+	check(buf.size() == 400, "0.05s at 8kHz should be 400 samples, got %d" % buf.size())
+	var path := OS.get_user_data_dir().path_join("synth_test.wav")
+	check(Synth.save_wav(path, buf, 8000, true) == OK, "save_wav failed")
+	var stream := AudioStreamWAV.load_from_file(path)
+	check(stream != null, "written wav should load")
+	if stream != null:
+		check(stream.mix_rate == 8000, "mix rate should be 8000, got %d" % stream.mix_rate)
+		check(stream.loop_mode != AudioStreamWAV.LOOP_DISABLED, "smpl chunk should mark the wav as looping")
+		check(stream.loop_end == buf.size() - 1 or stream.loop_end == buf.size(), "loop should span the buffer, got end %d" % stream.loop_end)
+	DirAccess.remove_absolute(path)

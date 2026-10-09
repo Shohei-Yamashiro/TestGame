@@ -2,7 +2,7 @@ extends SceneTree
 
 # Loads every script and scene in the project and fails if any of them is broken.
 # Usage: godot --headless --path <project> -s res://tests/check_scripts.gd
-const ROOTS := ["res://scripts", "res://scenes", "res://tests"]
+const ROOTS := ["res://scripts", "res://scenes", "res://tests", "res://tools"]
 
 var failures: Array[String] = []
 var checked := 0
