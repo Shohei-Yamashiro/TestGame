@@ -109,15 +109,15 @@ func sfx_nova() -> PackedFloat32Array:
 	return out
 
 
-# "シャキン": a short rising swish, then an inharmonic synth ring like a blade of light.
+# "シャキン": a short rising swish, then a bright synth chime whose filter closes quickly.
 func sfx_swoosh() -> PackedFloat32Array:
 	var sha := s.highpass(s.lowpass(s.noise(0.09, {"attack": 0.03, "release": 0.03}), 2500.0, 10000.0), 1800.0)
 	sha = Synth.mixed(sha, s.tone(W.SAW, 0.09, 600.0, 1800.0, {"attack": 0.03, "release": 0.02, "gain": 0.25}))
-	var kin := s.silence(0.5)
-	for partial in [[1.0, 1.0], [1.51, 0.6], [2.04, 0.45], [2.76, 0.3], [3.93, 0.2]]:
-		var f: float = 1760.0 * partial[0]
-		kin = Synth.mixed(kin, s.tone(W.SINE, 0.5, f * 1.03, f, {"attack": 0.002, "decay": 7.0 + 3.0 * partial[0], "gain": partial[1]}))
-	kin = Synth.mixed(kin, s.tone(W.SQUARE, 0.12, 3520.0, 3520.0, {"duty": 0.125, "decay": 30.0, "gain": 0.2}))
+	var kin := s.silence(0.3)
+	for detune in [0.994, 1.006]:
+		kin = Synth.mixed(kin, s.tone(W.SAW, 0.3, 1320.0 * detune * 1.02, 1320.0 * detune, {"attack": 0.003, "decay": 11.0}), 0, 0.5)
+	kin = s.lowpass(kin, 7000.0, 1200.0)
+	kin = Synth.mixed(kin, s.tone(W.SINE, 0.2, 2640.0, -1.0, {"attack": 0.003, "decay": 16.0, "gain": 0.25}))
 	var out := Synth.mixed(sha, kin, s.samples(0.07))
 	return s.echo(_tail(out, 0.15), 0.07, 0.25, 0.3)
 
