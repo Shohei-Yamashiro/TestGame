@@ -18,12 +18,12 @@ const GEM_COMBO_STEPS := 12
 # A new play is dropped while the last one is younger than min_gap or max_voices are still sounding.
 const SOUNDS := {
 	"shot": [-19.0, 0.04, 3, 0.05],
-	"missile": [-17.0, 0.06, 3, 0.05],
+	"missile": [-13.0, 0.06, 3, 0.05],
 	"explode": [-12.0, 0.05, 4, 0.08],
 	"laser": [-13.0, 0.08, 2, 0.03],
 	"zap": [-15.0, 0.05, 3, 0.08],
 	"nova": [-12.0, 0.1, 2, 0.0],
-	"swoosh": [-14.0, 0.08, 2, 0.05],
+	"swoosh": [-9.0, 0.08, 2, 0.05],
 	"launch": [-15.0, 0.06, 3, 0.05],
 	"drain": [-19.0, 0.12, 2, 0.05],
 	"place": [-17.0, 0.06, 2, 0.03],

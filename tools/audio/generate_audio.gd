@@ -65,8 +65,10 @@ func sfx_shot() -> PackedFloat32Array:
 
 
 func sfx_missile() -> PackedFloat32Array:
-	var hiss := s.lowpass(s.noise(0.22, {"attack": 0.02, "decay": 10.0}), 1500.0, 5000.0)
-	return Synth.mixed(hiss, s.tone(W.SAW, 0.22, 180.0, 520.0, {"decay": 9.0, "gain": 0.35}))
+	var whistle := s.tone(W.SQUARE, 0.2, 520.0, 1560.0, {"duty": 0.3, "decay": 7.0, "vibrato_hz": 28.0, "vibrato": 0.6})
+	whistle = Synth.mixed(whistle, s.tone(W.TRIANGLE, 0.2, 260.0, 780.0, {"decay": 7.0, "gain": 0.6}))
+	whistle = Synth.mixed(whistle, s.highpass(s.noise(0.12, {"decay": 22.0, "gain": 0.35}), 2500.0))
+	return s.lowpass(whistle, 6000.0)
 
 
 func sfx_explode() -> PackedFloat32Array:
@@ -97,8 +99,10 @@ func sfx_nova() -> PackedFloat32Array:
 
 
 func sfx_swoosh() -> PackedFloat32Array:
-	var air := s.noise(0.3, {"attack": 0.08, "release": 0.15})
-	return s.highpass(s.lowpass(air, 900.0, 5000.0), 400.0)
+	var air := s.highpass(s.lowpass(s.noise(0.28, {"attack": 0.05, "release": 0.18}), 1200.0, 7000.0), 600.0)
+	var sweep := s.tone(W.SAW, 0.28, 330.0, 1320.0, {"attack": 0.04, "release": 0.16})
+	sweep = Synth.mixed(sweep, s.tone(W.SAW, 0.28, 333.0, 1333.0, {"attack": 0.04, "release": 0.16}))
+	return Synth.mixed(air, s.lowpass(sweep, 900.0, 4000.0), 0, 0.5)
 
 
 func sfx_launch() -> PackedFloat32Array:
