@@ -1002,6 +1002,11 @@ func test_audio_files_are_imported() -> void:
 		if stream != null:
 			check(stream.loop_mode == AudioStreamWAV.LOOP_DISABLED, "sfx %s should not loop" % sound)
 		check(AudioScript.SOUNDS[sound].size() == 4, "SOUNDS.%s needs [db, gap, voices, jitter]" % sound)
+	for sound: String in AudioScript.LOOPS:
+		var stream := load(AudioScript.SFX_DIR + sound + ".wav") as AudioStreamWAV
+		check(stream != null, "loop %s is missing" % sound)
+		if stream != null:
+			check(stream.loop_mode != AudioStreamWAV.LOOP_DISABLED, "loop %s should loop" % sound)
 	for track: String in AudioScript.MUSIC:
 		var stream := load(AudioScript.BGM_DIR + track + ".wav") as AudioStreamWAV
 		check(stream != null, "bgm %s is missing" % track)
@@ -1026,6 +1031,20 @@ func test_audio_throttles_repeats() -> void:
 	audio.free()
 	AudioScript.sfx("kill")
 	check(AudioScript._current == null, "sfx should be a no-op once the Audio node is gone")
+
+
+func test_audio_loop_fades_when_released() -> void:
+	var audio = AudioScript.new()
+	root.add_child(audio)
+	audio.hold_loop("wings_hum", 0.6)
+	audio._process(1.0)
+	check(is_equal_approx(audio.loop_level("wings_hum"), 0.6), "held loop should reach its level, got %.2f" % audio.loop_level("wings_hum"))
+	audio._loops["wings_hum"]["seen"] -= AudioScript.LOOP_HOLD + 0.1
+	audio._process(1.0)
+	check(audio.loop_level("wings_hum") == 0.0, "a loop nobody holds should fade out")
+	audio.hold_loop("nope", 1.0)
+	check(not audio._loops.has("nope"), "unknown loops are ignored")
+	audio.free()
 
 
 func test_audio_music_switching() -> void:

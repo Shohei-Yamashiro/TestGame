@@ -18,11 +18,11 @@ const GEM_COMBO_STEPS := 12
 # A new play is dropped while the last one is younger than min_gap or max_voices are still sounding.
 const SOUNDS := {
 	"shot": [-19.0, 0.04, 3, 0.05],
-	"missile": [-13.0, 0.06, 3, 0.05],
+	"missile": [-13.0, 0.03, 4, 0.06],
 	"explode": [-12.0, 0.05, 4, 0.08],
 	"laser": [-13.0, 0.08, 2, 0.03],
 	"zap": [-15.0, 0.05, 3, 0.08],
-	"nova": [-12.0, 0.1, 2, 0.0],
+	"nova": [-11.0, 0.1, 2, 0.0],
 	"swoosh": [-9.0, 0.08, 2, 0.05],
 	"launch": [-15.0, 0.06, 3, 0.05],
 	"drain": [-19.0, 0.12, 2, 0.05],
@@ -41,6 +41,13 @@ const SOUNDS := {
 	"clear": [-5.0, 0.5, 1, 0.0],
 	"gameover": [-5.0, 0.5, 1, 0.0],
 }
+# Looping beds that follow a 0..1 level, e.g. how far the wings are open. name: volume_db at full level.
+const LOOPS := {
+	"wings_hum": -21.0,
+}
+# A loop fades out once nothing has held it for this long (paused or frozen world included).
+const LOOP_HOLD := 0.15
+const LOOP_FADE := 3.0
 
 var _streams := {}
 var _last := {}
@@ -53,6 +60,7 @@ var _music_name := ""
 var _music_tween: Tween
 var _dimmed := false
 var _silent := false
+var _loops := {}
 var _gem_combo := 0
 var _gem_last := -1000.0
 
@@ -63,6 +71,12 @@ static var _current = null
 static func sfx(sound: String, pitch: float = 1.0) -> void:
 	if _current != null:
 		_current.play(sound, pitch)
+
+
+# Call every frame while the loop should sound; it fades out by itself once the calls stop.
+static func loop(sound: String, level: float) -> void:
+	if _current != null:
+		_current.hold_loop(sound, level)
 
 
 func _enter_tree() -> void:
@@ -113,6 +127,42 @@ func play(sound: String, pitch: float = 1.0) -> void:
 		if id != AudioStreamPlaybackPolyphonic.INVALID_ID:
 			ids.append(id)
 	_voices[sound] = ids
+
+
+func hold_loop(sound: String, level: float) -> void:
+	if not LOOPS.has(sound):
+		return
+	var entry: Dictionary = _loops.get(sound, {})
+	if entry.is_empty():
+		var player := AudioStreamPlayer.new()
+		player.name = "Loop_" + sound
+		player.stream = load(SFX_DIR + sound + ".wav")
+		player.volume_db = SILENT_DB
+		add_child(player)
+		entry = {"player": player, "level": 0.0, "target": 0.0, "seen": 0.0}
+		_loops[sound] = entry
+	entry["target"] = clampf(level, 0.0, 1.0)
+	entry["seen"] = _now()
+
+
+func loop_level(sound: String) -> float:
+	return float(_loops.get(sound, {}).get("level", 0.0))
+
+
+func _process(delta: float) -> void:
+	var now := _now()
+	for sound: String in _loops:
+		var entry: Dictionary = _loops[sound]
+		var target := float(entry["target"]) if now - float(entry["seen"]) < LOOP_HOLD else 0.0
+		entry["level"] = move_toward(float(entry["level"]), target, delta * LOOP_FADE)
+		var player: AudioStreamPlayer = entry["player"]
+		if float(entry["level"]) <= 0.0:
+			if player.playing:
+				player.stop()
+			continue
+		player.volume_db = float(LOOPS[sound]) + linear_to_db(float(entry["level"]))
+		if not player.playing and not _silent:
+			player.play()
 
 
 # Quick pickups climb a semitone each, up to an octave.

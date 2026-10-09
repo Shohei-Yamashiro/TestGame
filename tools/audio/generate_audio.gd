@@ -25,7 +25,9 @@ func _initialize() -> void:
 	for method in get_method_list():
 		var name: String = method["name"]
 		if name.begins_with("sfx_"):
-			_write_sfx(name.trim_prefix("sfx_"))
+			_write_sfx(name.trim_prefix("sfx_"), "sfx_", false)
+		elif name.begins_with("loop_"):
+			_write_sfx(name.trim_prefix("loop_"), "loop_", true)
 	s = Synth.new(BGM_RATE, 11)
 	if _wanted("title"):
 		_save(BGM_DIR + "title.wav", bgm_title(), BGM_RATE, true)
@@ -39,12 +41,12 @@ func _wanted(name: String) -> bool:
 	return _only.is_empty() or _only.has(name)
 
 
-func _write_sfx(name: String) -> void:
+func _write_sfx(name: String, prefix: String, loop: bool) -> void:
 	if not _wanted(name):
 		return
 	s.rng.seed = hash(name)
-	var buf: PackedFloat32Array = call("sfx_" + name)
-	_save(SFX_DIR + name + ".wav", Synth.normalize(buf, 0.9), SFX_RATE, false)
+	var buf: PackedFloat32Array = call(prefix + name)
+	_save(SFX_DIR + name + ".wav", Synth.normalize(buf, 0.9), SFX_RATE, loop)
 
 
 func _save(path: String, buf: PackedFloat32Array, rate: int, loop: bool) -> void:
@@ -64,11 +66,12 @@ func sfx_shot() -> PackedFloat32Array:
 	return s.lowpass(body, 6000.0)
 
 
+# One "シュパッ" per missile; a volley launches every 0.06s, so it must be over in about that time.
 func sfx_missile() -> PackedFloat32Array:
-	var whistle := s.tone(W.SQUARE, 0.2, 520.0, 1560.0, {"duty": 0.3, "decay": 7.0, "vibrato_hz": 28.0, "vibrato": 0.6})
-	whistle = Synth.mixed(whistle, s.tone(W.TRIANGLE, 0.2, 260.0, 780.0, {"decay": 7.0, "gain": 0.6}))
-	whistle = Synth.mixed(whistle, s.highpass(s.noise(0.12, {"decay": 22.0, "gain": 0.35}), 2500.0))
-	return s.lowpass(whistle, 6000.0)
+	var shu := s.highpass(s.lowpass(s.noise(0.05, {"attack": 0.004, "decay": 45.0}), 3000.0, 9000.0), 1500.0)
+	var pa := s.tone(W.SQUARE, 0.07, 700.0, 2600.0, {"duty": 0.2, "attack": 0.002, "decay": 38.0})
+	pa = Synth.mixed(pa, s.tone(W.SAW, 0.07, 1400.0, 3900.0, {"decay": 45.0, "gain": 0.4}))
+	return s.lowpass(Synth.mixed(shu, pa, s.samples(0.012), 0.8), 8000.0)
 
 
 func sfx_explode() -> PackedFloat32Array:
@@ -92,17 +95,45 @@ func sfx_zap() -> PackedFloat32Array:
 	return Synth.crush(zap, 6.0)
 
 
+# A sonar ping that comes back fainter and duller each time.
 func sfx_nova() -> PackedFloat32Array:
-	var wave := s.tone(W.SINE, 0.45, 180.0, 720.0, {"attack": 0.01, "decay": 6.0})
-	wave = Synth.mixed(wave, s.tone(W.TRIANGLE, 0.45, 183.0, 735.0, {"attack": 0.01, "decay": 6.0, "gain": 0.6}))
-	return Synth.mixed(wave, s.lowpass(s.noise(0.45, {"attack": 0.05, "decay": 8.0, "gain": 0.25}), 800.0, 4000.0))
+	var ping := s.tone(W.SINE, 0.3, 1480.0, 1400.0, {"attack": 0.003, "decay": 9.0})
+	ping = Synth.mixed(ping, s.tone(W.SINE, 0.3, 2960.0, 2800.0, {"attack": 0.003, "decay": 16.0, "gain": 0.25}))
+	ping = Synth.mixed(ping, s.tone(W.TRIANGLE, 0.08, 220.0, 90.0, {"decay": 30.0, "gain": 0.5}))
+	var out := s.silence(1.1)
+	var gain := 1.0
+	for i in 5:
+		var echo := ping if i == 0 else s.lowpass(ping, 2600.0 - 400.0 * i)
+		out = Synth.mixed(out, echo, s.samples(0.19 * i), gain)
+		gain *= 0.45
+	return out
 
 
+# "シャキン": a short rising swish, then an inharmonic synth ring like a blade of light.
 func sfx_swoosh() -> PackedFloat32Array:
-	var air := s.highpass(s.lowpass(s.noise(0.28, {"attack": 0.05, "release": 0.18}), 1200.0, 7000.0), 600.0)
-	var sweep := s.tone(W.SAW, 0.28, 330.0, 1320.0, {"attack": 0.04, "release": 0.16})
-	sweep = Synth.mixed(sweep, s.tone(W.SAW, 0.28, 333.0, 1333.0, {"attack": 0.04, "release": 0.16}))
-	return Synth.mixed(air, s.lowpass(sweep, 900.0, 4000.0), 0, 0.5)
+	var sha := s.highpass(s.lowpass(s.noise(0.09, {"attack": 0.03, "release": 0.03}), 2500.0, 10000.0), 1800.0)
+	sha = Synth.mixed(sha, s.tone(W.SAW, 0.09, 600.0, 1800.0, {"attack": 0.03, "release": 0.02, "gain": 0.25}))
+	var kin := s.silence(0.5)
+	for partial in [[1.0, 1.0], [1.51, 0.6], [2.04, 0.45], [2.76, 0.3], [3.93, 0.2]]:
+		var f: float = 1760.0 * partial[0]
+		kin = Synth.mixed(kin, s.tone(W.SINE, 0.5, f * 1.03, f, {"attack": 0.002, "decay": 7.0 + 3.0 * partial[0], "gain": partial[1]}))
+	kin = Synth.mixed(kin, s.tone(W.SQUARE, 0.12, 3520.0, 3520.0, {"duty": 0.125, "decay": 30.0, "gain": 0.2}))
+	var out := Synth.mixed(sha, kin, s.samples(0.07))
+	return s.echo(_tail(out, 0.15), 0.07, 0.25, 0.3)
+
+
+# A faint, airy shimmer with a high pad, under the deployed wings. Two seconds, looping seamlessly:
+# every partial is a multiple of 0.5 Hz, and the noise crossfades over the loop point.
+func loop_wings_hum() -> PackedFloat32Array:
+	var length := 2.0
+	var fade := 0.5
+	var bed := Synth.Track.new(s.samples(length))
+	var air := s.noise(length + fade, {"attack": fade, "release": fade})
+	bed.add(s.highpass(s.lowpass(air, 9000.0), 3500.0), 0, 0.5)
+	for pair in [[659.5, 660.5], [988.0, 989.0], [1318.5, 1320.0], [1975.5, 1977.0]]:
+		for f: float in pair:
+			bed.add(s.tone(W.SINE, length, f, -1.0, {"attack": 0.0001, "release": 0.0001}), 0, 0.12)
+	return bed.data
 
 
 func sfx_launch() -> PackedFloat32Array:
