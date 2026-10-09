@@ -152,9 +152,12 @@ func sfx_heal() -> PackedFloat32Array:
 
 
 func sfx_hurt() -> PackedFloat32Array:
-	var hit := s.tone(W.SQUARE, 0.28, 260.0, 70.0, {"duty": 0.5, "decay": 9.0})
-	hit = Synth.mixed(hit, s.lowpass(s.noise(0.2, {"decay": 14.0}), 2500.0, 400.0))
-	return Synth.soft_clip(hit, 2.5)
+	var blip := Synth.concat([
+		s.tone(W.SQUARE, 0.05, 1320.0, 990.0, {"duty": 0.25, "release": 0.005}),
+		s.tone(W.SQUARE, 0.09, 990.0, 620.0, {"duty": 0.25, "decay": 18.0}),
+	])
+	blip = Synth.mixed(blip, s.highpass(s.noise(0.04, {"decay": 60.0, "gain": 0.25}), 4000.0))
+	return s.lowpass(blip, 7000.0)
 
 
 func sfx_death() -> PackedFloat32Array:
