@@ -3,6 +3,7 @@ extends Node2D
 const Palette := preload("res://scripts/palette.gd")
 const Balance := preload("res://scripts/balance.gd")
 const EnemyShotScript := preload("res://scripts/enemy_shot.gd")
+const Audio := preload("res://scripts/audio.gd")
 
 signal died(at: Vector2, xp: int, points: int)
 
@@ -205,6 +206,7 @@ func _update_shoot(to_player: Vector2) -> void:
 
 # Several shots spread evenly across a fan centred on the player.
 func _fire(dir: Vector2) -> void:
+	Audio.sfx("enemy_shot")
 	for i in shot_count:
 		var offset := (float(i) - float(shot_count - 1) * 0.5) * Balance.SHOT_FAN
 		var shot := EnemyShotScript.new()
@@ -227,11 +229,14 @@ func take_damage(amount: int, from_dir: Vector2, knockback: float = Balance.KNOC
 		var fx := get_tree().get_first_node_in_group("fx")
 		if fx:
 			fx.shatter(global_position, Palette.hdr(color, 1.2), clampf(radius / 12.0, 0.8, 1.6))
+		Audio.sfx("kill", clampf(12.0 / radius, 0.6, 1.2))
 		if _burn_time > 0.0 and _burn_spread > 0.0:
 			_spread_fire()
 		died.emit(global_position, xp_value, points)
 		queue_free()
-	elif _state == State.CHASE:
+		return
+	Audio.sfx("hit")
+	if _state == State.CHASE:
 		var boost: float = float(_player.get("knock_mult")) if _player != null else 1.0
 		global_position += from_dir * knockback * knock_scale * boost
 

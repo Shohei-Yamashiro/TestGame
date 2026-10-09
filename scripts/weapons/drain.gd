@@ -25,6 +25,7 @@ func _physics_process(delta: float) -> void:
 		var targets := _nearest_enemies(player.global_position, area_of(Balance.DRAIN_RANGE), 2 if is_milestone() else 1, {})
 		if not targets.is_empty() and player.spend_hp(Balance.DRAIN_COST):
 			_cd = cooldown_of(stat("interval"))
+			Audio.sfx("drain")
 			for target in targets:
 				links.append({"target": target, "age": 0.0, "tick_cd": 0.0, "end": target.global_position})
 	for i in range(links.size() - 1, -1, -1):

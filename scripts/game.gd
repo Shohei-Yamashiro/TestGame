@@ -5,6 +5,7 @@ const GemScript := preload("res://scripts/gem.gd")
 const HealScript := preload("res://scripts/heal_pickup.gd")
 const BackgroundScript := preload("res://scripts/background.gd")
 const FxScript := preload("res://scripts/fx.gd")
+const AudioScript := preload("res://scripts/audio.gd")
 const TitleDecoScript := preload("res://scripts/title_deco.gd")
 const Palette := preload("res://scripts/palette.gd")
 const Balance := preload("res://scripts/balance.gd")
@@ -54,6 +55,7 @@ var world: Node2D
 var player
 var camera: CameraRig
 var fx: Node2D
+var audio: AudioScript
 var scores := ScoreStore.new()
 var spawner := Spawner.new(self)
 var elapsed := 0.0
@@ -91,6 +93,9 @@ func _ready() -> void:
 	process_physics_priority = 10
 	add_to_group("game")
 	scores.load_saved()
+	audio = AudioScript.new()
+	audio.name = "Audio"
+	add_child(audio)
 	_build_environment()
 	_build_world()
 	_build_ui()
@@ -99,6 +104,8 @@ func _ready() -> void:
 	if skip_title:
 		skip_title = false
 		_start_game()
+	else:
+		audio.play_music("title")
 
 
 func _physics_process(delta: float) -> void:
@@ -175,6 +182,8 @@ func _start_game() -> void:
 	title_layer.visible = false
 	fx.ring(player.global_position, Palette.hdr(Palette.PLAYER, 1.6), 160.0, 0.6)
 	fx.burst(player.global_position, Palette.hdr(Palette.PLAYER, 1.4), 24, 520.0)
+	audio.play("start")
+	audio.play_music("game")
 
 
 func _pause() -> void:
@@ -183,6 +192,8 @@ func _pause() -> void:
 	phase = Phase.PAUSED
 	world.process_mode = Node.PROCESS_MODE_DISABLED
 	pause_layer.visible = true
+	audio.play("ui")
+	audio.dim_music(true)
 
 
 func _resume() -> void:
@@ -191,6 +202,8 @@ func _resume() -> void:
 	pause_layer.visible = false
 	phase = Phase.PLAYING
 	world.process_mode = Node.PROCESS_MODE_INHERIT
+	audio.play("ui")
+	audio.dim_music(false)
 
 
 func _back_to_title() -> void:
@@ -323,6 +336,7 @@ func drop_heal(at: Vector2) -> void:
 # At full HP a kit is banked as points instead, so picking one up is never wasted.
 func _on_heal_collected(amount: int) -> void:
 	heals_picked += 1
+	audio.play("heal")
 	if player.hp >= player.max_hp:
 		score += Balance.HEAL_SCORE
 		heal_score += Balance.HEAL_SCORE
@@ -338,6 +352,7 @@ func _on_gem_collected(value: int) -> void:
 	if phase == Phase.GAME_OVER:
 		return
 	# Fractions from the growth passive are banked so small gems still add up.
+	audio.gem()
 	_xp_carry += float(value) * player.xp_mult
 	var gained := int(_xp_carry)
 	_xp_carry -= float(gained)
@@ -364,6 +379,8 @@ func _finish(survived: bool) -> void:
 	world.process_mode = Node.PROCESS_MODE_DISABLED
 	upgrade_layer.visible = false
 	pause_layer.visible = false
+	audio.stop_music(0.4)
+	audio.play("clear" if survived else "gameover")
 	var hp_bonus := 0
 	var clear_bonus := 0
 	if survived:
@@ -404,10 +421,12 @@ func _open_level_up() -> void:
 	phase = Phase.LEVEL_UP
 	world.process_mode = Node.PROCESS_MODE_DISABLED
 	upgrade_layer.show_choices(level_choices, item_level)
+	audio.play("levelup")
 
 
 # Everything is maxed: no menu, just heal when hurt or bank points.
 func _overflow_level() -> void:
+	audio.play("levelup")
 	if player.hp < player.max_hp:
 		player.hp = mini(player.max_hp, player.hp + Balance.HEAL_AMOUNT)
 		fx.ring(player.global_position, Palette.hdr(Palette.HURT, 1.4), 90.0, 0.4)
@@ -476,6 +495,7 @@ func _apply_upgrade(id: String) -> void:
 	phase = Phase.PLAYING
 	world.process_mode = Node.PROCESS_MODE_INHERIT
 	fx.ring(player.global_position, Palette.hdr(UI_ACCENT, 1.6), 70.0, 0.35)
+	audio.play("select")
 
 
 func _passive_value(id: String, key: String) -> Variant:
@@ -611,14 +631,17 @@ func _open_library() -> void:
 		return
 	title_deco.visible = false
 	library_layer.open()
+	audio.play("ui")
 
 
 func _on_library_closed() -> void:
 	title_deco.visible = phase == Phase.TITLE
+	audio.play("ui")
 
 
 func _show_ranking(open: bool) -> void:
 	title_layer.show_ranking(open, scores.records)
+	audio.play("ui")
 	title_deco.visible = not open
 
 

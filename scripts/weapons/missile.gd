@@ -3,6 +3,7 @@ extends Node2D
 const Palette := preload("res://scripts/palette.gd")
 const Balance := preload("res://scripts/balance.gd")
 const EnemyScript := preload("res://scripts/enemy.gd")
+const Audio := preload("res://scripts/audio.gd")
 
 const LIFETIME := 3.0
 const HIT_MARGIN := 6.0
@@ -82,6 +83,7 @@ func _explode() -> void:
 		var reach: float = blast_radius + float(node.radius)
 		if d.length_squared() <= reach * reach:
 			node.take_damage(blast, d.normalized())
+	Audio.sfx("explode", 1.3)
 	if _fx:
 		_fx.ring(global_position, Palette.hdr(Palette.HOMING, 1.4), blast_radius, 0.25)
 		_fx.burst(global_position, Palette.hdr(Palette.HOMING, 1.2), 10, 260.0)

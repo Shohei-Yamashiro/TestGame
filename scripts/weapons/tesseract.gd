@@ -60,6 +60,7 @@ func is_sliding(cube: Dictionary) -> bool:
 
 
 func launch() -> void:
+	Audio.sfx("launch")
 	var spreads := [-Balance.TESSERACT_SPREAD, Balance.TESSERACT_SPREAD] if is_milestone() else [0.0]
 	for spread: float in spreads:
 		cubes.append({

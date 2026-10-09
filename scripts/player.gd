@@ -2,6 +2,7 @@ extends Node2D
 
 const Palette := preload("res://scripts/palette.gd")
 const Balance := preload("res://scripts/balance.gd")
+const Audio := preload("res://scripts/audio.gd")
 
 signal died
 signal hurt(amount: int)
@@ -150,8 +151,11 @@ func take_hit(damage: int) -> bool:
 		alive = false
 		if fx:
 			fx.shatter(global_position, Palette.hdr(Palette.PLAYER, 1.3), 2.2)
+		Audio.sfx("death")
 		visible = false
 		died.emit()
+	else:
+		Audio.sfx("hurt")
 	return true
 
 

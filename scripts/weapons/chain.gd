@@ -37,6 +37,7 @@ func max_targets() -> int:
 
 # Hits first, then hops to the nearest enemy not yet struck; returns how many enemies were hit.
 func strike(first: Node2D) -> int:
+	Audio.sfx("zap")
 	var hit := {}
 	var points := PackedVector2Array([player.global_position])
 	var damage := float(damage_of(stat("damage")))

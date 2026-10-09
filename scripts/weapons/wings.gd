@@ -83,6 +83,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _start_sweep() -> void:
+	Audio.sfx("swoosh")
 	_sweep_t = 0.0
 
 

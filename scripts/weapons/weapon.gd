@@ -3,6 +3,7 @@ extends Node2D
 const Palette := preload("res://scripts/palette.gd")
 const Balance := preload("res://scripts/balance.gd")
 const PlayerScript := preload("res://scripts/player.gd")
+const Audio := preload("res://scripts/audio.gd")
 
 var id := ""
 var level := 1
