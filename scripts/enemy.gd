@@ -52,6 +52,9 @@ var _burn_tick := 0.0
 var _burn_damage := 0
 # Above zero, the fire jumps this far to nearby enemies when this one dies burning.
 var _burn_spread := 0.0
+var _drawn_look := 0
+# Created on the first burn; the flames flicker every frame while the body stays cached.
+var _flames: Node2D
 
 
 func setup(enemy_kind: String, t: float) -> void:
@@ -131,9 +134,18 @@ func _spread_fire() -> void:
 			fx.burst(other.global_position, Palette.hdr(Palette.BURN, 1.4), 5, 160.0)
 
 
+# Rotation is a transform change, so the body keeps its cached drawing except while it animates.
+func needs_redraw() -> bool:
+	return _age < SPAWN_IN + 0.05 or _state != State.CHASE
+
+
+# Looks that hold steady while they last; the body only redraws when one of them toggles.
+func _look() -> int:
+	return (1 if _flash > 0.0 else 0) | (2 if _slow_time > 0.0 else 0) | (4 if _state != State.CHASE else 0) | (8 if _age >= SPAWN_IN else 0)
+
+
 func _physics_process(delta: float) -> void:
-	# Rotation is a transform change; only animated states need a fresh draw.
-	if _age < SPAWN_IN + 0.05 or _flash > 0.0 or _state != State.CHASE or _slow_time > 0.0 or _burn_time > 0.0 or behavior == "shoot":
+	if needs_redraw() or _look() != _drawn_look:
 		queue_redraw()
 	if _burn_time > 0.0 and alive:
 		_update_burn(delta)
@@ -145,6 +157,7 @@ func _physics_process(delta: float) -> void:
 		_slow_time -= delta
 		pace = _slow_factor
 	rotation += _spin * delta * (3.0 if _state == State.WINDUP else 1.0) * pace
+	_update_flames()
 	if not alive or _player == null:
 		return
 	var to_player := _player.global_position - global_position
@@ -276,9 +289,27 @@ func _draw_lane(charge: float) -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
-# Three flickering tongues of plasma rising above the body, drawn upright whatever the spin.
-func _draw_flames(r: float) -> void:
-	draw_set_transform(Vector2.ZERO, -rotation, Vector2.ONE)
+func _spawn_scale() -> float:
+	return 1.0 - pow(1.0 - clampf(_age / SPAWN_IN, 0.0, 1.0), 3.0)
+
+
+func _update_flames() -> void:
+	if _burn_time <= 0.0:
+		if _flames != null:
+			_flames.visible = false
+		return
+	if _flames == null:
+		_flames = Node2D.new()
+		_flames.draw.connect(_draw_flames)
+		add_child(_flames)
+	_flames.visible = true
+	_flames.rotation = -rotation
+	_flames.queue_redraw()
+
+
+# Three flickering tongues of plasma rising above the body, upright whatever the spin.
+func _draw_flames() -> void:
+	var r := radius * _spawn_scale()
 	for k in 3:
 		var x := (float(k) - 1.0) * r * 0.55
 		var height := r * (0.9 + 0.35 * sin(_age * 14.0 + float(k) * 2.1)) * (1.2 if k == 1 else 0.85)
@@ -286,14 +317,13 @@ func _draw_flames(r: float) -> void:
 		var tongue := PackedVector2Array([base + Vector2(-r * 0.28, 0), base + Vector2(0, -height), base + Vector2(r * 0.28, 0)])
 		var flame := Palette.hdr(Palette.BURN, 1.6)
 		flame.a = 0.75
-		draw_colored_polygon(tongue, flame)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		_flames.draw_colored_polygon(tongue, flame)
 
 
 func _draw() -> void:
+	_drawn_look = _look()
 	var grow := clampf(_age / SPAWN_IN, 0.0, 1.0)
-	var scale_in := 1.0 - pow(1.0 - grow, 3.0)
-	var r := radius * scale_in
+	var r := radius * _spawn_scale()
 	if r <= 0.5:
 		return
 	var tint := color
@@ -322,8 +352,6 @@ func _draw() -> void:
 		var frost := Palette.hdr(Palette.SLOW, 1.2)
 		frost.a = 0.55
 		draw_arc(Vector2.ZERO, radius + 4.0, 0.0, TAU, 20, frost, 1.5, true)
-	if _burn_time > 0.0:
-		_draw_flames(r)
 	if grow < 1.0:
 		var ring := Palette.hdr(color, 1.2)
 		ring.a = 1.0 - grow
