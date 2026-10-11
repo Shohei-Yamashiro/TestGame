@@ -1,23 +1,24 @@
 extends Node2D
 
 const Palette := preload("res://scripts/palette.gd")
+const LOGO_FONT := preload("res://assets/fonts/MPLUS1-Variable.ttf")
 
 const LOGO_SIZE := 88
-const LOGO_SPACING := 8.0
+const LOGO_SPACING := 1.0
 const SUB_SIZE := 22
 const PINK := Color(1.0, 0.3, 0.72)
 const CYAN := Color(0.35, 0.95, 1.0)
 
 var camera: Camera2D
 var sub_font: Font
-var _logo_font := SystemFont.new()
+var _logo_font := FontVariation.new()
 var _time := 0.0
 
 
 func _ready() -> void:
 	z_index = 10
-	_logo_font.font_names = PackedStringArray(["Bahnschrift", "Segoe UI", "Arial"])
-	_logo_font.font_weight = 700
+	_logo_font.base_font = LOGO_FONT
+	_logo_font.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): 700}
 
 
 func _process(delta: float) -> void:
