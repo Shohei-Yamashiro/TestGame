@@ -1060,6 +1060,18 @@ func test_audio_music_switching() -> void:
 	audio.free()
 
 
+func test_audio_releases_players_on_exit() -> void:
+	var audio = AudioScript.new()
+	root.add_child(audio)
+	audio.hold_loop("wings_hum", 1.0)
+	audio.play_music("game")
+	root.remove_child(audio)
+	check(AudioScript._current == null, "the static hook should let go once the node leaves the tree")
+	for player in audio.find_children("*", "AudioStreamPlayer", false, false):
+		check(not player.playing, "%s should be stopped on exit" % player.name)
+	audio.free()
+
+
 func test_synth_writes_looping_wav() -> void:
 	var a := Synth.new(8000, 3)
 	var b := Synth.new(8000, 3)
