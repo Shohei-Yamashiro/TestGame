@@ -13,6 +13,7 @@ const CameraRig := preload("res://scripts/camera_rig.gd")
 const ItemIconScript := preload("res://scripts/item_icon.gd")
 const AudioScript := preload("res://scripts/audio.gd")
 const Synth := preload("res://tools/audio/synth.gd")
+const FxScript := preload("res://scripts/fx.gd")
 
 var _current := ""
 var _failures: Array[String] = []
@@ -1074,3 +1075,37 @@ func test_synth_writes_looping_wav() -> void:
 		check(stream.loop_mode != AudioStreamWAV.LOOP_DISABLED, "smpl chunk should mark the wav as looping")
 		check(stream.loop_end == buf.size() - 1 or stream.loop_end == buf.size(), "loop should span the buffer, got end %d" % stream.loop_end)
 	DirAccess.remove_absolute(path)
+
+
+func test_fx_particles_expire_and_recycle() -> void:
+	var fx = FxScript.new()
+	root.add_child(fx)
+	fx.shatter(Vector2.ZERO, Color.RED)
+	var spawned: int = fx.live_count()
+	check(spawned == 31, "a strength-1 shatter should emit 31 particles, got %d" % spawned)
+	fx._physics_process(0.5)
+	check(fx.live_count() > 0 and fx.live_count() < spawned, "short-lived sparks should be gone after 0.5s")
+	fx._physics_process(1.0)
+	check(fx.live_count() == 0, "every particle should expire within 1.5s, %d left" % fx.live_count())
+	for i in FxScript.MAX_PARTICLES + 10:
+		fx.burst(Vector2.ZERO, Color.WHITE, 1, 10.0)
+	check(fx.live_count() == FxScript.MAX_PARTICLES, "overflow should recycle the oldest slots, got %d live" % fx.live_count())
+	fx.free()
+
+
+func test_enemy_body_redraws_only_when_its_look_changes() -> void:
+	var game = _new_game()
+	game.spawner.spawn_enemy("tri", Vector2(300, 0))
+	var enemy = game.get_tree().get_nodes_in_group("enemies")[0]
+	enemy._age = 1.0
+	check(not enemy.needs_redraw(), "a settled chasing enemy keeps its cached drawing")
+	enemy.apply_slow(0.5, 1.0)
+	enemy.apply_burn(0, 1.0)
+	check(not enemy.needs_redraw(), "slow and burn shouldn't force a body redraw every frame")
+	check(enemy._look() != enemy._drawn_look, "starting a slow should change the look")
+	enemy._physics_process(0.016)
+	check(enemy._flames != null and enemy._flames.visible, "burning should show the flames child")
+	enemy._burn_time = 0.0
+	enemy._physics_process(0.016)
+	check(not enemy._flames.visible, "flames should hide once the burn ends")
+	game.free()
