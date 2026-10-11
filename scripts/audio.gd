@@ -86,6 +86,11 @@ func _enter_tree() -> void:
 func _exit_tree() -> void:
 	if _current == self:
 		_current = null
+	# Voices still sounding at quit hold their streams in the audio server and leak at exit.
+	for player in find_children("*", "AudioStreamPlayer", false, false):
+		player.stop()
+	_playback = null
+	_voices.clear()
 
 
 func _ready() -> void:
