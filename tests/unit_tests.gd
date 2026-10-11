@@ -696,6 +696,31 @@ func _lines_needed(label: Label, text: String) -> int:
 	return lines
 
 
+func _collect_text_files(dir: String, out: Array[String]) -> void:
+	for sub in DirAccess.get_directories_at(dir):
+		_collect_text_files(dir.path_join(sub), out)
+	for file in DirAccess.get_files_at(dir):
+		if file.get_extension() in ["gd", "tscn", "tres"]:
+			out.append(dir.path_join(file))
+
+
+func test_bundled_font_covers_every_ui_character() -> void:
+	var theme_font: Font = (load("res://scenes/ui/ui_theme.tres") as Theme).default_font
+	var fonts: Array[Font] = [theme_font]
+	fonts.append_array(theme_font.fallbacks)
+	var files: Array[String] = []
+	for dir in ["res://scripts", "res://scenes"]:
+		_collect_text_files(dir, files)
+	var missing := {}
+	for path in files:
+		var text := FileAccess.get_file_as_string(path)
+		for i in text.length():
+			var code := text.unicode_at(i)
+			if code > 0x7F and not fonts.any(func(font: Font) -> bool: return font.has_char(code)):
+				missing[String.chr(code)] = path
+	check(missing.is_empty(), "the bundled font lacks glyphs: %s" % str(missing))
+
+
 func test_level_up_texts_fit_their_cards() -> void:
 	var layer = (load("res://scenes/ui/level_up.tscn") as PackedScene).instantiate()
 	root.add_child(layer)
