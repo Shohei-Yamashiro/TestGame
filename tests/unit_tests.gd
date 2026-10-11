@@ -340,6 +340,44 @@ func test_ranking_migrates_legacy_best() -> void:
 	check(_scores(store) == [777], "a save with only a best score should become a single record")
 
 
+func test_ranking_carries_over_the_testgame_save_once() -> void:
+	var path := "user://test_carry.cfg"
+	var legacy := ProjectSettings.globalize_path("user://test_carry_legacy.cfg")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	var cfg := ConfigFile.new()
+	cfg.set_value("score", "records", [{"score": 900, "date": "", "cleared": true, "time": 180.0}])
+	cfg.save(legacy)
+	ScoreStore.persist = true
+	var store := ScoreStore.new()
+	store.path = path
+	store.legacy_path = legacy
+	store.load_saved()
+	check(_scores(store) == [900], "the old save should carry over when there is no new one, got %s" % [_scores(store)])
+	check(FileAccess.file_exists(legacy), "the old save should be kept as a backup")
+	store.record(1500, false, 60.0)
+	var again := ScoreStore.new()
+	again.path = path
+	again.legacy_path = legacy
+	again.load_saved()
+	ScoreStore.persist = false
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	DirAccess.remove_absolute(legacy)
+	check(_scores(again) == [1500, 900], "an existing new save must not be overwritten by the old one, got %s" % [_scores(again)])
+
+
+func test_windows_export_preset_ships_what_it_should() -> void:
+	var cfg := ConfigFile.new()
+	check(cfg.load("res://export_presets.cfg") == OK, "export_presets.cfg should exist")
+	check(cfg.get_value("preset.0", "platform", "") == "Windows Desktop", "preset 0 should be the Windows export")
+	var exclude := str(cfg.get_value("preset.0", "exclude_filter", ""))
+	check(exclude.contains("tests/*") and exclude.contains("tools/*"), "tests and tools must stay out of the build: %s" % exclude)
+	var include := str(cfg.get_value("preset.0", "include_filter", ""))
+	for font in load("res://scripts/licenses.gd").FONTS:
+		check(str(font[1]).get_file().matchn(include.trim_prefix("assets/fonts/")),
+			"the licenses screen reads %s, so the export must include it" % font[1])
+	check(cfg.get_value("preset.0.options", "binary_format/embed_pck", false), "the game should ship as a single exe")
+
+
 func _scores(store) -> Array:
 	var result := []
 	for record in store.records:

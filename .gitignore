@@ -2,5 +2,8 @@
 .godot/
 /android/
 
+# Export output (tools/export/export_windows.ps1)
+/build/
+
 # Windows shortcuts are machine-specific
 *.lnk

@@ -3,6 +3,8 @@ extends RefCounted
 # Top runs, best first, kept in user://save.cfg.
 const SAVE_PATH := "user://save.cfg"
 const MAX_RECORDS := 10
+# Where saves lived while the project was called "TestGame" (relative to OS.get_data_dir()).
+const LEGACY_PATH := "Godot/app_userdata/TestGame/save.cfg"
 
 # Automated runs turn this off (or pass "nosave") so they never touch the player's record.
 static var persist := true
@@ -11,6 +13,7 @@ static var persist := true
 var records: Array = []
 var best := 0
 var path := SAVE_PATH
+var legacy_path := OS.get_data_dir().path_join(LEGACY_PATH)
 
 
 func load_saved() -> void:
@@ -18,6 +21,9 @@ func load_saved() -> void:
 		persist = false
 	if not persist:
 		return
+	# Copied rather than moved, so the old file stays as a backup.
+	if not FileAccess.file_exists(path) and FileAccess.file_exists(legacy_path):
+		DirAccess.copy_absolute(legacy_path, ProjectSettings.globalize_path(path))
 	var cfg := ConfigFile.new()
 	if cfg.load(path) != OK:
 		return

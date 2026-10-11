@@ -86,6 +86,18 @@ Godot 4.7 で作っている、ヴァンパイアサバイバー系の個人学�
 2. Godot のプロジェクトマネージャーでこのフォルダの `project.godot` を開きます。
 3. F5（プロジェクトを実行）で起動します。
 
+## 書き出し（Windows）
+
+1. Godot 4.7.2 のエクスポートテンプレートを導入します（エディタの「エクスポートテンプレートの管理」、または公式の `.tpz` を `%APPDATA%\Godot\export_templates\4.7.2.stable` に展開）。
+2. 次のスクリプトを実行します。
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\export\export_windows.ps1
+```
+
+`build/windows/` に `NEON GEOMETRY.exe`（PCK 埋め込みの単体実行ファイル）と `THIRD-PARTY-NOTICES.txt` が出力され、配布用の `build/NEON_GEOMETRY-<バージョン>-windows.zip` も作られます。
+`tests/` と `tools/` は書き出しに含めません。バージョンは `project.godot` の `config/version` で設定します。
+
 ## テスト
 
 テストは `tests/` にあり、`tests/run_tests.ps1` で一括実行します。CI（GitHub Actions）も同じスクリプトを使います。
@@ -146,10 +158,12 @@ scripts/
   title_deco.gd         タイトルのネオンロゴ
   background.gd / fx.gd 背景とエフェクト
 tests/                  テスト一式と一括実行スクリプト
+tools/                  書き出し・ライセンス文・効果音と BGM の生成ツール（書き出しには含めない）
 .github/workflows/      CI 設定
 ```
 
 ## セーブデータ
 
-ハイスコアは `user://save.cfg`（Windows では `%APPDATA%\Godot\app_userdata\TestGame\save.cfg`）に保存されます。
+ハイスコアは `user://save.cfg`（Windows では `%APPDATA%\NEON GEOMETRY\save.cfg`）に保存されます。
+旧名 TestGame 時代の `%APPDATA%\Godot\app_userdata\TestGame\save.cfg` があり、新しい保存先にまだデータがなければ、初回起動時に複写して引き継ぎます。
 テストやボットは `nosave` 引数を付けて実行し、セーブデータを書き換えません。
