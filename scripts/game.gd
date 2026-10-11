@@ -26,6 +26,8 @@ const PauseScene := preload("res://scenes/ui/pause_menu.tscn")
 const TitleScene := preload("res://scenes/ui/title_menu.tscn")
 const LibraryScene := preload("res://scenes/ui/library.tscn")
 const Library := preload("res://scripts/ui/library.gd")
+const LicensesScene := preload("res://scenes/ui/licenses.tscn")
+const LicensesScreen := preload("res://scripts/ui/licenses_screen.gd")
 const WEAPON_SCRIPTS := {
 	"blaster": preload("res://scripts/weapons/blaster.gd"),
 	"homing": preload("res://scripts/weapons/homing.gd"),
@@ -85,6 +87,7 @@ var game_over_layer: GameOver
 var pause_layer: PauseMenu
 var title_layer: TitleMenu
 var library_layer: Library
+var licenses_layer: LicensesScreen
 var title_deco: Node2D
 
 
@@ -147,6 +150,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if library_layer.visible:
 		if key.keycode in [KEY_ESCAPE, KEY_BACKSPACE, KEY_P]:
 			library_layer.close()
+		return
+	if licenses_layer.visible:
+		if key.keycode in [KEY_ESCAPE, KEY_BACKSPACE]:
+			licenses_layer.close()
 		return
 	match phase:
 		Phase.TITLE:
@@ -619,11 +626,23 @@ func _build_ui() -> void:
 	title_layer.quit_requested.connect(_quit)
 	title_layer.ranking_requested.connect(_show_ranking)
 	title_layer.library_requested.connect(_open_library)
+	title_layer.licenses_requested.connect(_open_licenses)
 	add_child(title_layer)
 	title_layer.set_best(scores.best)
 	library_layer = LibraryScene.instantiate()
-	library_layer.closed.connect(_on_library_closed)
+	library_layer.closed.connect(_on_overlay_closed)
 	add_child(library_layer)
+	licenses_layer = LicensesScene.instantiate()
+	licenses_layer.closed.connect(_on_overlay_closed)
+	add_child(licenses_layer)
+
+
+func _open_licenses() -> void:
+	if phase != Phase.TITLE:
+		return
+	title_deco.visible = false
+	licenses_layer.open()
+	audio.play("ui")
 
 
 func _open_library() -> void:
@@ -634,7 +653,7 @@ func _open_library() -> void:
 	audio.play("ui")
 
 
-func _on_library_closed() -> void:
+func _on_overlay_closed() -> void:
 	title_deco.visible = phase == Phase.TITLE
 	audio.play("ui")
 

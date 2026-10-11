@@ -696,6 +696,32 @@ func _lines_needed(label: Label, text: String) -> int:
 	return lines
 
 
+func test_license_notices_are_complete_and_current() -> void:
+	var Licenses = load("res://scripts/licenses.gd")
+	var text: String = Licenses.notice_text()
+	for needle in ["Godot Engine contributors", "M+ FONTS Project Authors", "Noto Project Authors", "FreeType", "License: Expat"]:
+		check(text.contains(needle), "license notices should mention %s" % needle)
+	check(FileAccess.get_file_as_string(Licenses.NOTICE_PATH) == text,
+		"THIRD-PARTY-NOTICES.txt is stale; rerun tools/licenses/generate_notices.gd")
+
+
+func test_licenses_screen_opens_from_title_and_closes() -> void:
+	var game = (load("res://scenes/main.tscn") as PackedScene).instantiate()
+	root.add_child(game)
+	game.title_layer.licenses_requested.emit()
+	check(game.licenses_layer.visible, "the title button should open the licenses screen")
+	check(not game.title_deco.visible, "the title logo should hide behind the licenses screen")
+	var body: RichTextLabel = game.licenses_layer.get_node("Root/Body")
+	check(body.get_parsed_text().contains("Godot Engine"), "the licenses screen should list Godot Engine")
+	var esc := InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	esc.pressed = true
+	game._unhandled_input(esc)
+	check(not game.licenses_layer.visible, "Esc should close the licenses screen")
+	check(game.title_deco.visible and game.phase == game.Phase.TITLE, "closing should return to the title screen")
+	game.free()
+
+
 func _collect_text_files(dir: String, out: Array[String]) -> void:
 	for sub in DirAccess.get_directories_at(dir):
 		_collect_text_files(dir.path_join(sub), out)

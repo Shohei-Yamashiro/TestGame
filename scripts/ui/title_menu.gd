@@ -4,6 +4,7 @@ signal start_requested
 signal quit_requested
 signal ranking_requested(open: bool)
 signal library_requested
+signal licenses_requested
 
 const Palette := preload("res://scripts/palette.gd")
 const ScoreStore := preload("res://scripts/score_store.gd")
@@ -20,6 +21,7 @@ func _ready() -> void:
 	$Root/Start.pressed.connect(start_requested.emit)
 	$Root/RankingButton.pressed.connect(ranking_requested.emit.bind(true))
 	$Root/LibraryButton.pressed.connect(library_requested.emit)
+	$Root/LicensesButton.pressed.connect(licenses_requested.emit)
 	$Root/Quit.pressed.connect(quit_requested.emit)
 	$Root/Ranking/Back.pressed.connect(ranking_requested.emit.bind(false))
 	$Root/Ranking/Heading.text = "HIGH SCORE  TOP %d" % ScoreStore.MAX_RECORDS
