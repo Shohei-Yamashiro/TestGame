@@ -48,6 +48,7 @@ const LOOPS := {
 # A loop fades out once nothing has held it for this long (paused or frozen world included).
 const LOOP_HOLD := 0.15
 const LOOP_FADE := 3.0
+const STOP_SETTLE_MSEC := 60
 
 var _streams := {}
 var _last := {}
@@ -87,10 +88,14 @@ func _exit_tree() -> void:
 	if _current == self:
 		_current = null
 	# Voices still sounding at quit hold their streams in the audio server and leak at exit.
+	# The players have already left the tree and only paused (so `playing` reads false); stopping
+	# takes effect on the mixer's next pass, so give it a couple of buffers to run.
 	for player in find_children("*", "AudioStreamPlayer", false, false):
 		player.stop()
 	_playback = null
 	_voices.clear()
+	if not _silent:
+		OS.delay_msec(STOP_SETTLE_MSEC)
 
 
 func _ready() -> void:
