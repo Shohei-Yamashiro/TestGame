@@ -95,8 +95,17 @@ Godot 4.7 で作っている、ヴァンパイアサバイバー系の個人学�
 powershell -ExecutionPolicy Bypass -File tools\export\export_windows.ps1
 ```
 
-`build/windows/` に `NEON GEOMETRY.exe`（PCK 埋め込みの単体実行ファイル）と `THIRD-PARTY-NOTICES.txt` が出力され、配布用の `build/NEON_GEOMETRY-<バージョン>-windows.zip` も作られます。
+`build/windows/` に次が出力され、配布用の `build/NEON_GEOMETRY-<バージョン>-windows.zip` も作られます。
+
+- `NEON GEOMETRY.exe`（PCK 埋め込みの単体実行ファイル）
+- `THIRD-PARTY-NOTICES.txt`（エンジン・フォントなどの第三者表記）
+- `LICENSE.txt`（利用条件）
+- `README.txt`（展開・起動・削除の短い説明）
+- `幾何学サバイバー（NEON GEOMETRY）のご紹介.pdf`（同上の案内。原稿は `docs/portfolio/guide.html`）
+
 `tests/` と `tools/` は書き出しに含めません。バージョンは `project.godot` の `config/version` で設定します。
+案内 PDF だけ作り直す手順は `docs/README.md` を参照してください。
+案内 PDF の印刷には Microsoft Edge が必要です。
 
 ## テスト
 
@@ -157,8 +166,9 @@ scripts/
   item_icon.gd          武器・パッシブのアイコン描画
   title_deco.gd         タイトルのネオンロゴ
   background.gd / fx.gd 背景とエフェクト
+docs/                   配布用の案内 PDF 原稿・利用条件・README（詳細は docs/README.md）
 tests/                  テスト一式と一括実行スクリプト
-tools/                  書き出し・ライセンス文・効果音と BGM の生成ツール（書き出しには含めない）
+tools/                  書き出し・案内 PDF 印刷・ライセンス文・効果音と BGM の生成ツール（書き出しには含めない）
 .github/workflows/      CI 設定
 ```
 
