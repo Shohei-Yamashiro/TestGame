@@ -23,6 +23,7 @@ powershell -ExecutionPolicy Bypass -File tools\docs\pdf2png.ps1 `
   -Pdf build\NEON_GEOMETRY-guide.pdf -OutDir build\guide-pages
 
 # ゲーム本体と文書をまとめて zip にする
+# （案内 PDF は build\windows\ の中と、zip と同階層の build\ の両方に出る）
 powershell -ExecutionPolicy Bypass -File tools\export\export_windows.ps1
 ```
 

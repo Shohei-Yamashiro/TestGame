@@ -103,6 +103,8 @@ powershell -ExecutionPolicy Bypass -File tools\export\export_windows.ps1
 - `README.txt`（展開・起動・削除の短い説明）
 - `幾何学サバイバー（NEON GEOMETRY）のご紹介.pdf`（同上の案内。原稿は `docs/portfolio/guide.html`）
 
+同じ案内 PDF は、zip と同階層の `build/` にも出力されます（Google Drive などに zip と並べて置く用）。
+
 `tests/` と `tools/` は書き出しに含めません。バージョンは `project.godot` の `config/version` で設定します。
 案内 PDF だけ作り直す手順は `docs/README.md` を参照してください。
 案内 PDF の印刷には Microsoft Edge が必要です。
