@@ -400,6 +400,8 @@ func test_portfolio_distribution_docs_are_present() -> void:
 	var export_script := FileAccess.get_file_as_string("res://tools/export/export_windows.ps1")
 	for needle in ["docs\\distribution\\LICENSE.txt", "docs\\distribution\\README.txt", "pdf-filename.txt", "build-docs.ps1"]:
 		check(export_script.contains(needle), "export_windows.ps1 should pack %s" % needle)
+	check(export_script.contains("pdfBesideZip") and export_script.contains('Write-Host "PDF'),
+		"export_windows.ps1 should also write the guide PDF beside the zip")
 	var pdf_name := FileAccess.get_file_as_string("res://docs/portfolio/pdf-filename.txt").strip_edges()
 	check(pdf_name.contains("ご紹介.pdf") and pdf_name.contains("NEON GEOMETRY"),
 		"guide PDF filename should be Japanese with the English name: %s" % pdf_name)

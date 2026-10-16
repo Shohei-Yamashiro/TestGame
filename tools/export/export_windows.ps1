@@ -31,8 +31,11 @@ $guidePdf = Join-Path $project "build\NEON_GEOMETRY-guide.pdf"
 & $buildDocs -Html (Join-Path $project "docs\portfolio\guide.html") -Pdf $guidePdf | Out-Null
 if (-not (Test-Path $guidePdf)) { throw "guide PDF was not created" }
 # Japanese display name for readers (UTF-8 file so this script stays ASCII-only).
+# Copied beside the zip (for Drive preview) and into the zip folder.
 $pdfJaName = (Get-Content -LiteralPath (Join-Path $project "docs\portfolio\pdf-filename.txt") -Encoding UTF8 -Raw).Trim()
-Copy-Item $guidePdf (Join-Path $out $pdfJaName)
+$pdfBesideZip = Join-Path $project "build\$pdfJaName"
+Copy-Item $guidePdf $pdfBesideZip -Force
+Copy-Item $pdfBesideZip (Join-Path $out $pdfJaName)
 
 $version = (Select-String -Path (Join-Path $project "project.godot") -Pattern '^config/version="(.+)"').Matches[0].Groups[1].Value
 $zip = Join-Path $project "build\NEON_GEOMETRY-$version-windows.zip"
@@ -40,3 +43,4 @@ if (Test-Path $zip) { Remove-Item $zip -Force }
 Compress-Archive -Path (Join-Path $out "*") -DestinationPath $zip
 Get-ChildItem $out | Format-Table Name, Length -AutoSize | Out-String | Write-Host
 Write-Host "ZIP $zip"
+Write-Host "PDF $pdfBesideZip"
