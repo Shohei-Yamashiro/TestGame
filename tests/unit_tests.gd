@@ -370,12 +370,40 @@ func test_windows_export_preset_ships_what_it_should() -> void:
 	check(cfg.load("res://export_presets.cfg") == OK, "export_presets.cfg should exist")
 	check(cfg.get_value("preset.0", "platform", "") == "Windows Desktop", "preset 0 should be the Windows export")
 	var exclude := str(cfg.get_value("preset.0", "exclude_filter", ""))
-	check(exclude.contains("tests/*") and exclude.contains("tools/*"), "tests and tools must stay out of the build: %s" % exclude)
+	check(exclude.contains("tests/*") and exclude.contains("tools/*") and exclude.contains("docs/*") and exclude.contains("build/*"),
+		"tests, tools, docs and build must stay out of the pck: %s" % exclude)
 	var include := str(cfg.get_value("preset.0", "include_filter", ""))
 	for font in load("res://scripts/licenses.gd").FONTS:
 		check(str(font[1]).get_file().matchn(include.trim_prefix("assets/fonts/")),
 			"the licenses screen reads %s, so the export must include it" % font[1])
 	check(cfg.get_value("preset.0.options", "binary_format/embed_pck", false), "the game should ship as a single exe")
+
+
+func test_portfolio_distribution_docs_are_present() -> void:
+	for path in [
+		"res://docs/portfolio/guide.html",
+		"res://docs/portfolio/pdf-filename.txt",
+		"res://docs/distribution/LICENSE.txt",
+		"res://docs/distribution/README.txt",
+	]:
+		check(FileAccess.file_exists(path), "%s should exist for the portfolio zip" % path)
+	var license := FileAccess.get_file_as_string("res://docs/distribution/LICENSE.txt")
+	for needle in ["NEON GEOMETRY", "%APPDATA%\\NEON GEOMETRY", "THIRD-PARTY-NOTICES.txt", "無償"]:
+		check(license.contains(needle), "LICENSE.txt should mention %s" % needle)
+	var readme := FileAccess.get_file_as_string("res://docs/distribution/README.txt")
+	for needle in ["NEON GEOMETRY.exe", "すべて展開", "終了", "LICENSE.txt"]:
+		check(readme.contains(needle), "README.txt should mention %s" % needle)
+	var guide := FileAccess.get_file_as_string("res://docs/portfolio/guide.html")
+	check(guide.contains("NEON GEOMETRY.exe") and guide.contains("削除するとき"),
+		"the minimal guide should cover launch and deletion")
+	check(not guide.contains("デモアプリ"), "games must not label themselves as a demo app")
+	var export_script := FileAccess.get_file_as_string("res://tools/export/export_windows.ps1")
+	for needle in ["docs\\distribution\\LICENSE.txt", "docs\\distribution\\README.txt", "pdf-filename.txt", "build-docs.ps1"]:
+		check(export_script.contains(needle), "export_windows.ps1 should pack %s" % needle)
+	var pdf_name := FileAccess.get_file_as_string("res://docs/portfolio/pdf-filename.txt").strip_edges()
+	check(pdf_name.contains("ご紹介.pdf") and pdf_name.contains("NEON GEOMETRY"),
+		"guide PDF filename should be Japanese with the English name: %s" % pdf_name)
+	check(not pdf_name.begins_with("NEON"), "guide PDF filename should lead with the Japanese title, got %s" % pdf_name)
 
 
 func _scores(store) -> Array:
