@@ -7,3 +7,6 @@
 
 # Windows shortcuts are machine-specific
 *.lnk
+
+# Local user-directive logs (not for the remote repo)
+.cursor/user-directives/
