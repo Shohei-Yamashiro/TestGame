@@ -11,6 +11,7 @@ Godot 4.7 で作っている、ヴァンパイアサバイバー系の個人学�
 ## リリース（GitHub Releases）
 
 `v1.0.0` のような SemVer タグを `main` に付けると、Windows 向けの zip と案内 PDF が GitHub Releases に公開されます（`.github/workflows/release.yml`）。
+Release 上の案内 PDF は `NEON_GEOMETRY-guide.pdf`（GitHub が日本語ファイル名を扱えないため）。zip の中には従来どおり `幾何学サバイバー（NEON GEOMETRY）のご紹介.pdf` が入っています。
 
 ```powershell
 # 例（バージョンとタグはユーザーが明示したときだけ）
