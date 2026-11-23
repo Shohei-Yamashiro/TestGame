@@ -381,24 +381,30 @@ func test_windows_export_preset_ships_what_it_should() -> void:
 
 func test_portfolio_distribution_docs_are_present() -> void:
 	for path in [
+		"res://LICENSE",
 		"res://docs/portfolio/guide.html",
 		"res://docs/portfolio/pdf-filename.txt",
 		"res://docs/distribution/LICENSE.txt",
 		"res://docs/distribution/README.txt",
 	]:
 		check(FileAccess.file_exists(path), "%s should exist for the portfolio zip" % path)
+	var mit := FileAccess.get_file_as_string("res://LICENSE")
+	check(mit.contains("MIT License") and mit.contains("Shohei Yamashiro"),
+		"root LICENSE should be the MIT text with the author name")
 	var license := FileAccess.get_file_as_string("res://docs/distribution/LICENSE.txt")
-	for needle in ["NEON GEOMETRY", "%APPDATA%\\NEON GEOMETRY", "THIRD-PARTY-NOTICES.txt", "無償"]:
+	for needle in ["NEON GEOMETRY", "%APPDATA%\\NEON GEOMETRY", "THIRD-PARTY-NOTICES.txt", "MIT License", "再配布"]:
 		check(license.contains(needle), "LICENSE.txt should mention %s" % needle)
+	check(not license.contains("作者の事前の許諾なく"), "Japanese licence notes must not ban redistribution under MIT")
 	var readme := FileAccess.get_file_as_string("res://docs/distribution/README.txt")
-	for needle in ["NEON GEOMETRY.exe", "すべて展開", "終了", "LICENSE.txt"]:
+	for needle in ["NEON GEOMETRY.exe", "すべて展開", "終了", "MIT License"]:
 		check(readme.contains(needle), "README.txt should mention %s" % needle)
 	var guide := FileAccess.get_file_as_string("res://docs/portfolio/guide.html")
 	check(guide.contains("NEON GEOMETRY.exe") and guide.contains("削除するとき"),
 		"the minimal guide should cover launch and deletion")
+	check(guide.contains("MIT License"), "the guide should mention MIT License")
 	check(not guide.contains("デモアプリ"), "games must not label themselves as a demo app")
 	var export_script := FileAccess.get_file_as_string("res://tools/export/export_windows.ps1")
-	for needle in ["docs\\distribution\\LICENSE.txt", "docs\\distribution\\README.txt", "pdf-filename.txt", "build-docs.ps1"]:
+	for needle in ['"LICENSE"', "docs\\distribution\\LICENSE.txt", "docs\\distribution\\README.txt", "pdf-filename.txt", "build-docs.ps1"]:
 		check(export_script.contains(needle), "export_windows.ps1 should pack %s" % needle)
 	check(export_script.contains("pdfBesideZip") and export_script.contains('Write-Host "PDF'),
 		"export_windows.ps1 should also write the guide PDF beside the zip")
