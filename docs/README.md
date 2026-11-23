@@ -7,8 +7,9 @@
 |---|---|
 | `portfolio/guide.html` | 案内 PDF の原稿（Edge で印刷） |
 | `portfolio/pdf-filename.txt` | zip に入れる PDF の日本語ファイル名 |
-| `distribution/LICENSE.txt` | 利用条件 |
+| `distribution/LICENSE.txt` | MIT の日本語案内（データの保存場所など） |
 | `distribution/README.txt` | 配布用の短い説明 |
+| （リポジトリ直下）`LICENSE` | MIT License（英語原文） |
 | （リポジトリ直下）`THIRD-PARTY-NOTICES.txt` | Godot とフォントなどの第三者表記（生成物） |
 
 ## 作り方

@@ -1,0 +1,84 @@
+name: Release
+
+# Creates a GitHub Release with the Windows zip and guide PDF when a SemVer tag is pushed.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+env:
+  GODOT_VERSION: 4.7.2
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/godot
+            ~/godot-templates
+          key: godot-${{ env.GODOT_VERSION }}-win64-export
+
+      - name: Download Godot and export templates
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $ver = $env:GODOT_VERSION
+          New-Item -ItemType Directory -Force ~/godot, ~/godot-templates | Out-Null
+          $godotZip = Join-Path $env:RUNNER_TEMP "godot.zip"
+          $tpz = Join-Path $env:RUNNER_TEMP "templates.tpz"
+          curl.exe -fsSL -o $godotZip "https://github.com/godotengine/godot/releases/download/${ver}-stable/Godot_v${ver}-stable_win64.exe.zip"
+          curl.exe -fsSL -o $tpz "https://github.com/godotengine/godot/releases/download/${ver}-stable/Godot_v${ver}-stable_export_templates.tpz"
+          Expand-Archive -Path $godotZip -DestinationPath (Join-Path $HOME "godot") -Force
+          # .tpz is zip-compatible; Expand-Archive expects .zip on some hosts.
+          $tpzZip = Join-Path $env:RUNNER_TEMP "templates.zip"
+          Copy-Item $tpz $tpzZip -Force
+          Expand-Archive -Path $tpzZip -DestinationPath (Join-Path $HOME "godot-templates") -Force
+
+      - name: Install export templates
+        shell: pwsh
+        run: |
+          $ver = $env:GODOT_VERSION
+          $dest = Join-Path $env:APPDATA "Godot\export_templates\$ver.stable"
+          New-Item -ItemType Directory -Force $dest | Out-Null
+          $root = Join-Path $HOME "godot-templates"
+          $src = Join-Path $root "templates"
+          if (-not (Test-Path $src)) { $src = $root }
+          Copy-Item (Join-Path $src "*") $dest -Force
+
+      - name: Export Windows build
+        id: export
+        shell: pwsh
+        run: |
+          $godotDir = Join-Path $HOME "godot"
+          $godot = Get-ChildItem $godotDir -Filter "*console*.exe" -Recurse | Select-Object -First 1
+          if (-not $godot) {
+            $godot = Get-ChildItem $godotDir -Filter "Godot*.exe" -Recurse | Select-Object -First 1
+          }
+          if (-not $godot) { throw "Godot executable not found under $godotDir" }
+          ./tools/export/export_windows.ps1 -Godot $godot.FullName
+          $zip = Get-ChildItem build -Filter "NEON_GEOMETRY-*-windows.zip" | Select-Object -First 1
+          if (-not $zip) { throw "release zip not found" }
+          $pdfJa = (Get-Content -LiteralPath docs\portfolio\pdf-filename.txt -Encoding UTF8 -Raw).Trim()
+          $pdf = Join-Path "build" $pdfJa
+          if (-not (Test-Path -LiteralPath $pdf)) { throw "guide PDF not found: $pdf" }
+          "zip=$($zip.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "pdf=$pdf" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
+          files: |
+            ${{ steps.export.outputs.zip }}
+            ${{ steps.export.outputs.pdf }}

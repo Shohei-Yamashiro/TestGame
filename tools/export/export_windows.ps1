@@ -24,6 +24,7 @@ if ($LASTEXITCODE -ne 0 -or -not (Test-Path (Join-Path $out "$name.exe"))) {
 }
 
 Copy-Item (Join-Path $project "THIRD-PARTY-NOTICES.txt") $out
+Copy-Item (Join-Path $project "LICENSE") $out
 Copy-Item (Join-Path $project "docs\distribution\LICENSE.txt") $out
 Copy-Item (Join-Path $project "docs\distribution\README.txt") $out
 
