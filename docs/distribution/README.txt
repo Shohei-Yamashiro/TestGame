@@ -4,7 +4,8 @@ NEON GEOMETRY
 幾何学の敵を自動攻撃で倒しながら、3 分間生き残るゲームです。
 遊び方は、ゲーム内のタイトル画面と「ライブラリ」に書いてあります。
 
-本ソフトウェアは MIT License です。正式な許諾は LICENSE（英語）を、日本語の案内は LICENSE.txt を参照してください。
+作者オリジナルのソースは MIT License です。フォントは SIL OFL 1.1、その他は THIRD-PARTY-NOTICES.txt に従います。
+正式な許諾は LICENSE（英語）を、日本語の案内は LICENSE.txt を参照してください。
 展開と削除の手順は、同じフォルダの「幾何学サバイバー（NEON GEOMETRY）のご紹介.pdf」にもあります。
 
 このゲームは、作者が AI コーディングエージェント（Cursor）と協働して開発しました。

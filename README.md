@@ -5,7 +5,8 @@ Godot 4.7 で作っている、ヴァンパイアサバイバー系の個人学�
 
 画像・音声などの外部素材は一切使わず、見た目はすべてコードで描いた図形と HDR グローで表現しています。
 
-**ライセンス:** ソースおよびビルド成果物は [MIT License](LICENSE) です。第三者部品は [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt) を参照してください。
+**ライセンス:** 作者オリジナルのソースコードは [MIT License](LICENSE) です。
+同梱フォント（M PLUS 1 / Noto Sans Symbols 2）は SIL Open Font License 1.1、Godot およびその他の第三者部品は [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt) に従います。
 
 ## リリース（GitHub Releases）
 
@@ -113,8 +114,8 @@ powershell -ExecutionPolicy Bypass -File tools\export\export_windows.ps1
 `build/windows/` に次が出力され、配布用の `build/NEON_GEOMETRY-<バージョン>-windows.zip` も作られます。
 
 - `NEON GEOMETRY.exe`（PCK 埋め込みの単体実行ファイル）
-- `LICENSE`（MIT License・英語原文）
-- `LICENSE.txt`（MIT の日本語案内とデータの保存場所）
+- `LICENSE`（作者オリジナル部分の MIT License・英語原文）
+- `LICENSE.txt`（MIT / OFL / 第三者の切り分けとデータの保存場所）
 - `THIRD-PARTY-NOTICES.txt`（エンジン・フォントなどの第三者表記）
 - `README.txt`（展開・起動・削除の短い説明）
 - `幾何学サバイバー（NEON GEOMETRY）のご紹介.pdf`（同上の案内。原稿は `docs/portfolio/guide.html`）

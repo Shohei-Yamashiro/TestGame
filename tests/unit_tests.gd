@@ -392,16 +392,18 @@ func test_portfolio_distribution_docs_are_present() -> void:
 	check(mit.contains("MIT License") and mit.contains("Shohei Yamashiro"),
 		"root LICENSE should be the MIT text with the author name")
 	var license := FileAccess.get_file_as_string("res://docs/distribution/LICENSE.txt")
-	for needle in ["NEON GEOMETRY", "%APPDATA%\\NEON GEOMETRY", "THIRD-PARTY-NOTICES.txt", "MIT License", "再配布"]:
+	for needle in ["NEON GEOMETRY", "%APPDATA%\\NEON GEOMETRY", "THIRD-PARTY-NOTICES.txt", "MIT License", "SIL Open Font License", "再配布"]:
 		check(license.contains(needle), "LICENSE.txt should mention %s" % needle)
+	check(license.contains("作者オリジナル"), "LICENSE.txt should limit MIT to the author's original code")
 	check(not license.contains("作者の事前の許諾なく"), "Japanese licence notes must not ban redistribution under MIT")
 	var readme := FileAccess.get_file_as_string("res://docs/distribution/README.txt")
-	for needle in ["NEON GEOMETRY.exe", "すべて展開", "終了", "MIT License"]:
+	for needle in ["NEON GEOMETRY.exe", "すべて展開", "終了", "MIT License", "OFL"]:
 		check(readme.contains(needle), "README.txt should mention %s" % needle)
 	var guide := FileAccess.get_file_as_string("res://docs/portfolio/guide.html")
 	check(guide.contains("NEON GEOMETRY.exe") and guide.contains("削除するとき"),
 		"the minimal guide should cover launch and deletion")
-	check(guide.contains("MIT License"), "the guide should mention MIT License")
+	check(guide.contains("MIT License") and guide.contains("SIL OFL"),
+		"the guide should distinguish MIT code from OFL fonts")
 	check(not guide.contains("デモアプリ"), "games must not label themselves as a demo app")
 	var export_script := FileAccess.get_file_as_string("res://tools/export/export_windows.ps1")
 	for needle in ['"LICENSE"', "docs\\distribution\\LICENSE.txt", "docs\\distribution\\README.txt", "pdf-filename.txt", "build-docs.ps1"]:
