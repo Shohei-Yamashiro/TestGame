@@ -69,11 +69,11 @@ jobs:
           ./tools/export/export_windows.ps1 -Godot $godot.FullName
           $zip = Get-ChildItem build -Filter "NEON_GEOMETRY-*-windows.zip" | Select-Object -First 1
           if (-not $zip) { throw "release zip not found" }
-          $pdfJa = (Get-Content -LiteralPath docs\portfolio\pdf-filename.txt -Encoding UTF8 -Raw).Trim()
-          $pdf = Join-Path "build" $pdfJa
-          if (-not (Test-Path -LiteralPath $pdf)) { throw "guide PDF not found: $pdf" }
+          # GitHub Release asset names are ASCII-only; the zip still ships the Japanese PDF name.
+          $pdfAscii = Join-Path "build" "NEON_GEOMETRY-guide.pdf"
+          if (-not (Test-Path -LiteralPath $pdfAscii)) { throw "guide PDF not found: $pdfAscii" }
           "zip=$($zip.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          "pdf=$pdf" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "pdf=$pdfAscii" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v3
